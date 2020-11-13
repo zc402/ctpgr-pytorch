@@ -10,9 +10,10 @@ class AicResize(AicNative):
     """
     Provides resized images for network input
     """
-    def __init__(self, data_path: Path, is_train: bool, img_resize: tuple):
+    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple):
         super().__init__(data_path, is_train)
-        self.__fix_ratio_resize = FixRatioImgResize(img_resize)
+        self.resize_img_size = resize_img_size
+        self.__fix_ratio_resize = FixRatioImgResize(resize_img_size)
 
     def __getitem__(self, index) -> dict:
         res_dict = super().__getitem__(index)

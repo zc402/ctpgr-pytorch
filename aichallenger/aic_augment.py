@@ -8,14 +8,13 @@ import numpy as np
 from aichallenger.defination import Box, Joint, Person, Crowd
 from typing import Tuple, List
 
-
 class AicAugment(AicResize):
     """
     AicAugment dataset provides augmented images and labels.
     """
 
-    def __init__(self, data_path: Path, is_train: bool, img_resize: tuple):
-        super().__init__(data_path, is_train, img_resize)
+    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple):
+        super().__init__(data_path, is_train, resize_img_size)
 
     def __getitem__(self, index) -> dict:
         res_dict = super().__getitem__(index)
