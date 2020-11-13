@@ -31,13 +31,15 @@ class AICDataset(data.Dataset):
         # is_train: Set data path to "train" or "val" folder; disable augmentation when val
         self.is_train = is_train
         self.theta = 4  # Theta for gaussian kernel
+        self.paf_line_width = 3
         self.visual_debug = False  # Show image and joint heatmaps (vis and vis_or_not)
         # Default input normalization for model parameters in torchvision model zoo
         self.normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
         self.fix_ratio_resize = FixRatioImgResize(input_img_size)
         self.aic_augmentor = AICAugment()
-        self.heat_generator = HeatmapGenerator(heat_size, self.theta)
+        self.gaussian_generator = GaussianHeatmapGenerator(heat_size, self.theta)
+        self.paf_generator = PartAffinityFieldGenerator(heat_size, self.paf_line_width)
 
         assert input_img_size[0] % heat_size[0] == 0 and input_img_size[1] % heat_size[1] == 0, \
             "Incorrect sizes: input_img_size must be divisible by heat_size"
@@ -103,17 +105,17 @@ class AICDataset(data.Dataset):
         else:
             img_aug, pts_aug = resized_image, person_pts
 
-        heatmap = self.gen_AIC_confidence_map(pts_aug)  # Dict: confidence, visible
+        heatmap = self.gen_gaussian_for_image(pts_aug)  # Dict: confidence, visible
 
         if self.visual_debug:
-            self.show_heatmap(img_aug, heatmap)
+            self.show_gaussian_map(img_aug, heatmap)
 
         # scale to [0,1) and transpose HWC to CHW
         resized_image = transforms.ToTensor()(resized_image)
         # To use torchvision pretrained model, the input image must be normalized as follow.
         resized_image = self.normalize(resized_image)
 
-        for key, val in heatmap.items():  # Heatmap to tensor
+        for key, val in heatmap.items():  # Gaussian heatmap to tensor
             heatmap[key] = torch.from_numpy(np.asarray(val))
 
         output = {"resized": resized_image, "heatmap": heatmap}
@@ -149,9 +151,9 @@ class AICDataset(data.Dataset):
         image_aug = Image.fromarray(image_aug)
         return image_aug, person_pts_aug
 
-    def gen_AIC_confidence_map(self, person_pts):
+    def gen_gaussian_for_image(self, person_pts):
         """
-        为AIC数据集生成 confidence heatmap
+        为AIC数据集生成 gaussian heatmap
         :param person_pts: numpy array shape=(person, joint, xyv)
         :param input_size: Image size for convolutional network input
         :param heat_size: Heatmap size for network loss
@@ -171,25 +173,24 @@ class AICDataset(data.Dataset):
             heatmaps_visible = []  # Has heat when v = 1, No heat when v=0,2 (not visible, labeled/unlabeled)
             for p in range(num_people):  # People
                 cx, cy, v_value = person_pts[p, j]
-                # cx, cy = cx/w_scale, cy/h_scale
-                is_labeled = (v_value == 1 or v_value == 2)
+                is_labeled = (v_value == 1 or v_value == 2)  # Vis or not
                 is_visible = (v_value == 1)
 
-                heatmap = self.heat_generator.gen_heat_adjust_pt(self.input_img_size, (cx, cy))
+                heatmap = self.gaussian_generator.gen_heat_adjust_pt(self.input_img_size, (cx, cy))
 
                 heat_conf = heatmap if is_labeled else zero_heat
                 heat_vis = heatmap if is_visible else zero_heat
 
                 heatmaps_vis_or_not.append(heat_conf)
                 heatmaps_visible.append(heat_vis)
-            heat_people_conf = np.amax(heatmaps_vis_or_not, axis=0) # shape:(H,W). Heatmap showing 1 joint of multiple people
+            heat_people_vis_not = np.amax(heatmaps_vis_or_not, axis=0) # shape:(H,W). Heatmap showing 1 joint of multiple people
             heat_people_vis = np.amax(heatmaps_visible, axis=0)
-            heat["vis_or_not"].append(heat_people_conf)
+            heat["vis_or_not"].append(heat_people_vis_not)
             heat["visible"].append(heat_people_vis)
 
         return heat
 
-    def show_heatmap(self, img, heat):
+    def show_gaussian_map(self, img, heat):
         conf_gray_map = np.amax(heat["vis_or_not"], axis=0)
         vis_gray_map = np.amax(heat["visible"], axis=0)
 
@@ -201,6 +202,31 @@ class AICDataset(data.Dataset):
         ax[1][1].imshow(vis_gray_map)
         plt.show()
         plt.pause(10)
+
+    def gen_pafs_for_image(self, person_pts):
+        assert len(person_pts.shape) == 3
+        num_people = person_pts.shape[0]
+        connections = [[1,2], [2,3], [4,5], [5,6], [14,1], [14,4], [7,8], [8,9], [10,11], [11,12], [13,14]]
+        connections = np.asarray(connections, np.int) - 1
+        zero_heat = np.zeros((self.heat_size[1], self.heat_size[0]), np.float)
+        connect_heats = []  # Expected shape: (connections, H, W)
+        for j1, j2 in connections:
+            person_heats = []  # Expected shape: (person, H, W)
+            for p in range(num_people):
+                _, _, vis1 = person_pts[p, j1]
+                _, _, vis2 = person_pts[p, j2]
+                p1, p2 = person_pts[p, j1, :2], person_pts[p, j2, :2]
+                if vis1 == 1 and vis2 == 1:  # Both visible
+                    person_paf = self.paf_generator.gen_field(p1, p2)
+                else:
+                    person_paf = zero_heat
+                person_heats.append(person_paf)
+            img_heat = np.amax(person_heats, axis=0)
+            connect_heats.append(img_heat)
+        return connect_heats
+
+
+
 
     def pil_loader(self, image_path):
         # open path as file to avoid ResourceWarning
@@ -282,7 +308,8 @@ class AICAugment:
         return image_aug, kps_aug
 
 
-class HeatmapGenerator:
+# Generate a Gaussian point.
+class GaussianHeatmapGenerator:
 
     def __init__(self, heat_size, theta):
         self.w = heat_size[0]  # Heat w
@@ -297,6 +324,7 @@ class HeatmapGenerator:
         cx, cy = pt[0], pt[1]
         x_mesh, y_mesh = np.meshgrid(np.arange(0, self.w), np.arange(0, self.h))
         heatmap = np.exp(-(np.square(x_mesh - cx) + np.square(y_mesh - cy)) / (np.square(self.theta)))
+        heatmap = heatmap.astype(np.float)
         return heatmap
 
     def gen_heat_adjust_pt(self, img_size, pt):
@@ -312,3 +340,19 @@ class HeatmapGenerator:
         heat_y = pt[1] * ratio_h
         heatmap = self.gen_heat((heat_x, heat_y))
         return heatmap
+
+
+# Generate a line with adjustable width. (float image 0~1 ranged)
+class PartAffinityFieldGenerator:
+    def __init__(self, heat_size, thickness):
+        self.thickness = thickness
+        self.heat_size = heat_size  # Heatmap image size
+
+    def gen_field(self, pt1, pt2):
+        canvas = np.zeros(self.thickness, dtype=np.uint8)
+        cv2.line(canvas, tuple(pt1.astype(np.int32)), tuple(pt2.astype(np.int32)), 255, self.thickness)
+
+        # Convert to [0,1]
+        canvas = canvas.astype(np.float)
+        canvas = canvas / 255.
+        return canvas

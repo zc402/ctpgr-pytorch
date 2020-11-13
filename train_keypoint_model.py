@@ -17,7 +17,7 @@ class Trainer:
         #    Set batch_size to 1, ignore the argument given.
         self.debug_mode = debug_mode
         self.epochs = 100
-        self.val_step = 500
+        self.val_step = 2000
 
         if torch.cuda.is_available():
             print("GPU available.")
@@ -25,7 +25,7 @@ class Trainer:
             print("GPU not available! running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model_pose = PAFsNetwork(b1_classes=14, b2_classes=11 * 2)
-        self.model_pose.to(self.device)
+        self.model_pose.to(self.device, dtype=torch.float)
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-4)
         self.model_path = Path("pose_model.pt")
@@ -37,8 +37,6 @@ class Trainer:
         else:
             self.batch_size = batch_size
             workers = 4
-
-        # TODO: Use train dataset (much bigger)
 
         train_dataset = AICDataset(Path.home() / "AI_challenger_keypoint", input_img_size=(512, 512), heat_size=(64, 64), is_train=True)
         self.train_loader = DataLoader(train_dataset, self.batch_size, shuffle=True, num_workers=workers,
@@ -71,7 +69,7 @@ class Trainer:
 
         self.set_train()
         for batch_idx, inputs in enumerate(self.train_loader):
-            inputs["resized"] = inputs["resized"].to(self.device)
+            inputs["resized"] = inputs["resized"].to(self.device, dtype=torch.float)
             inputs["heatmap"]["vis_or_not"] = inputs["heatmap"]["vis_or_not"].to(self.device, dtype=torch.float)
             inputs["heatmap"]["visible"] = inputs["heatmap"]["visible"].to(self.device, dtype=torch.float)
 
@@ -83,7 +81,7 @@ class Trainer:
                 # self.log("train", inputs, predicts, loss)
                 self.val()
 
-            if self.step % 10 == 0:
+            if self.step % 50 == 0:
                 print("step {}; Loss {}".format(self.step, loss.item()))
 
             self.step += 1
@@ -97,9 +95,9 @@ class Trainer:
         except StopIteration:
             self.val_iter = next(self.val_iter)
             inputs = self.val_iter.next()
-        inputs["resized"] = inputs["resized"].to(self.device)
-        inputs["heatmap"]["vis_or_not"] = inputs["heatmap"]["vis_or_not"].to(self.device)
-        inputs["heatmap"]["visible"] = inputs["heatmap"]["visible"].to(self.device)
+        inputs["resized"] = inputs["resized"].to(self.device, dtype=torch.float)
+        inputs["heatmap"]["vis_or_not"] = inputs["heatmap"]["vis_or_not"].to(self.device, dtype=torch.float)
+        inputs["heatmap"]["visible"] = inputs["heatmap"]["visible"].to(self.device, dtype=torch.float)
         with torch.no_grad():
             predicts, loss = self.process_batch(inputs)
 
@@ -111,14 +109,14 @@ class Trainer:
         gt_vis = inputs["heatmap"]["visible"][0].cpu().numpy()
         gt_vis = np.amax(gt_vis, axis=0)
 
-        plt.close('all')
-        fig, ax = plt.subplots(2, 3, figsize=(15, 15))
-        img = np.asarray(img)
-        ax[0, 0].imshow(img)
-        ax[0, 2].imshow(gt_vis)
-        ax[1, 2].imshow(pred_vis)
-        plt.show()
-        plt.pause(1.0)
+        # plt.close('all')
+        # fig, ax = plt.subplots(2, 3, figsize=(15, 15))
+        # img = np.asarray(img)
+        # ax[0, 0].imshow(img)
+        # ax[0, 2].imshow(gt_vis)
+        # ax[1, 2].imshow(pred_vis)
+        # plt.show()
+        # plt.pause(1.0)
 
         self.set_train()
 
@@ -150,7 +148,7 @@ class Trainer:
 
 def main():
     plt.ion()
-    Trainer(batch_size=5, debug_mode=True).train()
+    Trainer(batch_size=5, debug_mode=False).train()
 
 
 if __name__ == "__main__":
