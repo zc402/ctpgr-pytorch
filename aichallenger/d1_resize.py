@@ -1,4 +1,4 @@
-from aichallenger.aic_native import AicNative
+from aichallenger.d0_native import AicNative
 from pathlib import Path
 import cv2
 import numpy as np
@@ -9,9 +9,10 @@ from typing import Tuple, List
 class AicResize(AicNative):
     """
     Provides resized images for network input
+    Construct 'resized_img' and 'resized_label'
     """
-    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple):
-        super().__init__(data_path, is_train)
+    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, **kwargs):
+        super().__init__(data_path, is_train, **kwargs)
         self.resize_img_size = resize_img_size
         self.__fix_ratio_resize = FixRatioImgResize(resize_img_size)
 

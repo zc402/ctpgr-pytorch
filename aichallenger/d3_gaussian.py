@@ -1,4 +1,4 @@
-from aichallenger.aic_augment import AicAugment
+from aichallenger import AicAugment
 from pathlib import Path
 import cv2
 import numpy as np
@@ -9,21 +9,24 @@ from typing import Tuple, List
 class AicGaussian(AicAugment):
     """
     Provides gaussian heatmaps for keypoints, ranged 0~1
+    Construct "gau_vis" "gau_vis_or_not", shape:CHW
     """
 
-    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, heat_size: tuple):
-        super().__init__(data_path, is_train, resize_img_size)
+    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, heat_size: tuple, **kwargs):
+        super().__init__(data_path, is_train, resize_img_size, **kwargs)
         self.heat_size = heat_size
+        assert resize_img_size[0] % heat_size[0] == 0 and resize_img_size[1] % heat_size[1] == 0, \
+            "Incorrect heat size: resize_img_size must be divisible by heat_size."
         self.__theta = 4
         self.__gaussian_generator = GaussianPoint(heat_size, self.__theta)
 
     def __getitem__(self, index) -> dict:
         res_dict = super().__getitem__(index)
-        heat_dict = self.__gen_gaussian_for_image(res_dict["aug_label"])
-        res_dict["gaussian"] = heat_dict
+        heat_dict = self.__get_gaussian_groundtruth(res_dict["aug_label"])
+        res_dict.update(heat_dict)
         return res_dict
 
-    def __gen_gaussian_for_image(self, crowd: Crowd) -> dict:
+    def __get_gaussian_groundtruth(self, crowd: Crowd) -> dict:
         """
         为AIC数据集生成 gaussian heatmap
         :return:
@@ -34,8 +37,8 @@ class AicGaussian(AicAugment):
 
         num_people: int = len(crowd)
         num_joints: int = len(crowd[0].joints)
-        heat_dict = {"vis_or_not": [],
-                     "visible": []}  # shape: (J,H,W). on_image: keypoint on image, visible or not visible
+        heat_dict = {"gau_vis_or_not": [],
+                     "gau_vis": []}  # shape: (J,H,W). on_image: keypoint on image, visible or not visible
         for j in range(num_joints):
             # Heatmaps for same joint and different person
             heatmaps_vis_or_not = []  # Has heat when v=1,2, No heat when v=0 (not labeled)
@@ -54,8 +57,10 @@ class AicGaussian(AicAugment):
             # Heatmap of same joints and different people
             heat_people_vis_not = np.amax(heatmaps_vis_or_not, axis=0)
             heat_people_vis = np.amax(heatmaps_visible, axis=0)
-            heat_dict["vis_or_not"].append(heat_people_vis_not)
-            heat_dict["visible"].append(heat_people_vis)
+            heat_dict["gau_vis_or_not"].append(heat_people_vis_not)
+            heat_dict["gau_vis"].append(heat_people_vis)
+        heat_dict["gau_vis_or_not"] = np.asarray(heat_dict["gau_vis_or_not"], dtype=np.float)
+        heat_dict["gau_vis"] = np.asarray(heat_dict["gau_vis"], dtype=np.float)
 
         return heat_dict
 

@@ -11,10 +11,12 @@ from aichallenger.defination import Box, Joint, Person, Crowd
 class AicNative(Dataset):
     """
     Basic AI Challenger dataset loads images and labels
+    Construct 'native_img' and 'native_label'
     """
 
-    def __init__(self, data_path: Path, is_train: bool):
+    def __init__(self, data_path: Path, is_train: bool, **kwargs):
         self.is_train = is_train
+        self.kwargs = kwargs
 
         paths = dict()
         paths[("train", "root")] = data_path / "ai_challenger_keypoint_train_20170909"
