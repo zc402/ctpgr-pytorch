@@ -12,7 +12,7 @@ class AicAffinityField(AicGaussian):
     """
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, heat_size: tuple, **kwargs):
         super().__init__(data_path, is_train, resize_img_size, heat_size, **kwargs)
-        self.__paf_line_width = 3
+        self.__paf_line_width = 2
         self.__paf_generator = PartAffinityFieldGenerator(heat_size, self.__paf_line_width)
 
     def __getitem__(self, index) -> dict:
@@ -33,15 +33,18 @@ class AicAffinityField(AicGaussian):
             for p in range(num_people):
                 vis1 = crowd[p].joints[j1].v
                 vis2 = crowd[p].joints[j2].v
-                p1, p2 = crowd[p].joints[j1][:2], crowd[p].joints[j2][:2]
+                p1 = (crowd[p].joints[j1].x, self.resize_img_size[1] - crowd[p].joints[j1].y)
+                p2 = (crowd[p].joints[j2].x, self.resize_img_size[1] - crowd[p].joints[j2].y)
+
                 if vis1 == 1 and vis2 == 1:  # Both visible
-                    person_paf = self.__paf_generator.gen_field(p1, p2)
+                    person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
                 else:
                     person_paf = zero_heat
                 person_heats.append(person_paf)
             img_heat = np.amax(person_heats, axis=0)
             connect_heats.append(img_heat)
         return connect_heats
+
 
 # Generate a line with adjustable width. (float image 0~1 ranged)
 class PartAffinityFieldGenerator:
@@ -57,3 +60,17 @@ class PartAffinityFieldGenerator:
         canvas = canvas.astype(np.float)
         canvas = canvas / 255.
         return canvas
+
+    def gen_field_adjust_pts(self, pt1: Tuple[int, int], pt2: Tuple[int, int], img_size):
+        img_w, img_h = img_size
+        w, h = self.heat_size
+        ratio_w = w / img_w
+        ratio_h = h / img_h
+        new_pt1 = np.array(pt1) * (ratio_w, ratio_h)
+        new_pt1 = new_pt1.astype(np.int)
+        new_pt1 = tuple(new_pt1)
+        new_pt2 = np.array(pt2) * (ratio_w, ratio_h)
+        new_pt2 = new_pt2.astype(np.int)
+        new_pt2 = tuple(new_pt2)
+        pafs = self.gen_field(new_pt1, new_pt2)
+        return pafs

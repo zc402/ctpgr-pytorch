@@ -45,6 +45,7 @@ class AicGaussian(AicAugment):
             heatmaps_visible = []  # Has heat when v = 1, No heat when v=0,2 (not visible, labeled/unlabeled)
             for p in range(num_people):  # People
                 cx, cy, v_value = crowd[p].joints[j]
+                cy = self.resize_img_size[1] - cy  # y counts from down to top
                 is_labeled = (v_value == 1 or v_value == 2)  # Vis or not
                 is_visible = (v_value == 1)
                 heatmap = self.__gaussian_generator.gen_heat_adjust_pt(self.resize_img_size, (cx, cy))
