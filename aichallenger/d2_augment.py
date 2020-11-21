@@ -6,9 +6,10 @@ import cv2
 import numpy as np
 
 from aichallenger import AicResize
-from aichallenger.defination import Box, Joint, Person, Crowd
+from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
 
+# TODO: random seeds for threads
 class AicAugment(AicResize):
     """
     AicAugment dataset provides augmented images and labels.

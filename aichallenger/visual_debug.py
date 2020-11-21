@@ -3,18 +3,20 @@ from pathlib import Path
 import visdom
 import numpy as np
 from aichallenger import AicNorm
+
+# TODO: Check resize bugs
 class VisualDebug:
     def __init__(self):
         self.vis = visdom.Visdom()
         root = Path.home() / "AI_challenger_keypoint"
         train_dataset = AicNorm(root, True, (512, 512), (64, 64), visual_debug=True)
-        self.res_dict = train_dataset[0]
+        self.res_dict = train_dataset[1]
 
     def show(self):
 
-        # self._show_bgr_uint8(res_dict['native_img'], 'native_img')
-        # self._show_bgr_uint8('resized_img')
-        # self._show_bgr_uint8('aug_img')
+        self._show_bgr_uint8('native_img')
+        self._show_bgr_uint8('resized_img')
+        self._show_bgr_uint8('aug_img')
         self._show_bgr_uint8('img_before_aug')
         self._show_bgr_uint8('img_after_aug')
         self._show_heat_amax_float('gau_vis')

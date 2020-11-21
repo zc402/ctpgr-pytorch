@@ -2,7 +2,7 @@ from aichallenger.d0_native import AicNative
 from pathlib import Path
 import cv2
 import numpy as np
-from aichallenger.defination import Box, Joint, Person, Crowd
+from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
 
 
@@ -59,7 +59,7 @@ class FixRatioImgResize:
         """
         new_w, new_h = self.new_size  # 预计输入网络的图片尺寸
         w_div_h = new_w / new_h  # w divide by h
-        native_w, native_h = native_img.shape[:2]  # 原始图片尺寸
+        native_h, native_w = native_img.shape[:2]  # 原始图片尺寸
         native_w_div_h = native_w / native_h
         if native_w_div_h > w_div_h:
             # 原图比例宽边为主，需缩短/拉伸宽边到新图宽边

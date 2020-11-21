@@ -2,7 +2,7 @@ from aichallenger import AicAffinityField
 from pathlib import Path
 import cv2
 import numpy as np
-from aichallenger.defination import Box, Joint, Person, Crowd
+from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
 
 class AicNorm(AicAffinityField):

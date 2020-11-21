@@ -5,7 +5,7 @@ import json
 import numpy as np
 import cv2
 
-from aichallenger.defination import Box, Joint, Person, Crowd
+from aichallenger.defines import Box, Joint, Person, Crowd
 
 
 class AicNative(Dataset):
