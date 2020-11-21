@@ -15,7 +15,7 @@ class Trainer:
         #    Set batch_size to 1, ignore the argument given.
         self.debug_mode = debug_mode
         self.epochs = 100
-        self.val_step = 1000
+        self.val_step = 500
         self.vis = visdom.Visdom()
 
         if torch.cuda.is_available():
@@ -26,7 +26,7 @@ class Trainer:
         self.model_pose = PAFsNetwork(b1_classes=14, b2_classes=11 * 2)
         self.model_pose.to(self.device, dtype=torch.float)
 
-        self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-4)
+        self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
         self.model_path = Path("pose_model.pt")
         self.l2 = torch.nn.MSELoss()
 
@@ -124,7 +124,7 @@ class Trainer:
 
     def save_model(self):
 
-        torch.save(self.model_pose, self.model_path)
+        torch.save(self.model_pose.state_dict(), self.model_path)
         print("Model saved.")
 
     def load_model(self):
