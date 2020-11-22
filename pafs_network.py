@@ -8,7 +8,7 @@ class Vgg19Top10(nn.Module):
     """Top 10 Layers of VGG19 + Two conv layers"""
     def __init__(self):
         super(Vgg19Top10, self).__init__()
-        vgg_net = torchvision.models.vgg19(pretrained=True)
+        vgg_net = torchvision.models.vgg19(pretrained=False)
         vgg_top10 = list(vgg_net.features.children())[0:23]
         conv4_3 = nn.Conv2d(512, 256, kernel_size=3, padding=1)
         relu4_3 = nn.ReLU(inplace=True)
@@ -107,3 +107,18 @@ class PAFsNetwork(nn.Module):
         b1 = x3_1  # Branch 1 final output
         b2 = x3_2  # Branch 2 final output
         return b1_stages, b2_stages, b1, b2
+
+
+class PAFsLoss(nn.Module):
+    """
+    pred: shape (N, Stage, C, H, W)
+    """
+    def forward(self, pred_b1, pred_b2, gt_pcm, gt_paf):
+        assert len(pred_b1.shape) == 5  # (N, Stage, C, H, W)
+        assert len(gt_pcm.shape) == 5
+        pred = torch.cat((pred_b1, pred_b2), dim=2)
+        gt = torch.cat((gt_pcm, gt_paf), dim=2)
+        square = (pred - gt) ** 2
+        sum_over_one_batch = torch.sum(square, dim=(1, 2, 3, 4))  # Shape (N)
+        mean = sum_over_one_batch.mean()
+        return mean

@@ -6,6 +6,7 @@ import torch.optim as optim
 from pathlib import Path
 import visdom
 from pafs_network import PAFsNetwork
+from pafs_network import PAFsLoss
 from aichallenger import AicNorm
 
 class Trainer:
@@ -23,12 +24,12 @@ class Trainer:
         else:
             print("GPU not available! running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model_pose = PAFsNetwork(b1_classes=14, b2_classes=11 * 2)
+        self.model_pose = PAFsNetwork(b1_classes=14, b2_classes=11)
         self.model_pose.to(self.device, dtype=torch.float)
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
         self.model_path = Path("pose_model.pt")
-        self.l2 = torch.nn.MSELoss()
+        self.loss_model = PAFsLoss()
 
         if self.debug_mode:
             self.batch_size = 1
@@ -73,8 +74,8 @@ class Trainer:
         for batch_idx, inputs in enumerate(self.train_loader):
             inputs["norm_aug_img"] = inputs["norm_aug_img"].to(self.device, dtype=torch.float)
             inputs["gau_vis"] = inputs["gau_vis"].to(self.device, dtype=torch.float)
-
-            predicts, loss = self.process_batch(inputs)
+            inputs["pafs"] = inputs["pafs"].to(self.device, dtype=torch.float)
+            loss, _, _ = self.process_batch(inputs)
             self.model_optimizer.zero_grad()
             loss.backward()
             self.model_optimizer.step()
@@ -98,29 +99,37 @@ class Trainer:
             inputs = self.val_iter.next()
 
         inputs_gpu = {"norm_aug_img": inputs["norm_aug_img"].to(self.device, dtype=torch.float),
-                      "gau_vis": inputs["gau_vis"].to(self.device, dtype=torch.float)}
+                      "gau_vis": inputs["gau_vis"].to(self.device, dtype=torch.float),
+                      "pafs": inputs["pafs"].to(self.device, dtype=torch.float)}
         with torch.no_grad():
-            predicts, loss = self.process_batch(inputs_gpu)
-        predict_amax = np.amax(predicts[0].cpu().numpy(), axis=0)  # HW
-        gt_gau_amax = np.amax(inputs["gau_vis"][0].cpu().numpy(), axis=0)
+            loss, b1_out, b2_out = self.process_batch(inputs_gpu)
+        pred_pcm_amax = np.amax(b1_out[0].cpu().numpy(), axis=0)  # HW
+        gt_pcm_amax = np.amax(inputs["gau_vis"][0].cpu().numpy(), axis=0)
+        pred_paf_amax = np.amax(b2_out[0].cpu().numpy(), axis=0)
+        gt_paf_amax = np.amax(inputs["pafs"][0].cpu().numpy(), axis=0)
 
         self.vis.image(inputs["norm_aug_img"][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
-        self.vis.heatmap(predict_amax, win="Pred", opts={'title': "predicts"})
-        self.vis.heatmap(gt_gau_amax, win="GT", opts={'title': "GT"})
-
+        self.vis.heatmap(pred_pcm_amax, win="Pred-PCM", opts={'title': "Pred-PCM"})
+        self.vis.heatmap(gt_pcm_amax, win="GT-PCM", opts={'title': "GT-PCM"})
+        self.vis.heatmap(pred_paf_amax, win="Pred-PAF", opts={'title': "Pred-PAF"})
+        self.vis.heatmap(gt_paf_amax, win="GT-PAF", opts={'title': "GT-PAF"})
+        self.vis.line(X=np.array([self.step]), Y=loss.cpu().numpy()[np.newaxis], win='Loss', update='append')
         self.set_train()
 
     def process_batch(self, inputs):
         """Pass a minibatch through the network and generate images and losses
         """
-        b1_stages, b2_stages, b1, b2 = self.model_pose(inputs["norm_aug_img"])
-        gt_heat = inputs["gau_vis"]  # ["heatmap"]: {"vis_or_not": NJHW, "visible": NJHW}
-        b1_all = torch.stack(b1_stages, dim=0)
-        heat_all = torch.stack(3*[gt_heat])
+        b1_stages, b2_stages, b1_out, b2_out = self.model_pose(inputs["norm_aug_img"])
+        gt_pcm = inputs["gau_vis"]  # ["heatmap"]: {"vis_or_not": NJHW, "visible": NJHW}
+        gt_pcm = gt_pcm.unsqueeze(1)
+        gt_paf = inputs["pafs"]
+        gt_paf = gt_paf.unsqueeze(1)
+        b1_stack = torch.stack(b1_stages, dim=1)  # Shape (N, Stage, C, H, W)
+        b2_stack = torch.stack(b2_stages, dim=1)
 
-        loss = self.l2(b1_all, heat_all)
+        loss = self.loss_model(b1_stack, b2_stack, gt_pcm, gt_paf)
 
-        return b1, loss
+        return loss, b1_out, b2_out
 
     def save_model(self):
 

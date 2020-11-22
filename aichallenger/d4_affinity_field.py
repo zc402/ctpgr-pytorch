@@ -21,7 +21,7 @@ class AicAffinityField(AicGaussian):
         res_dict["pafs"] = pafs
         return res_dict
 
-    def __get_pafs_groundtruth(self, crowd: Crowd) -> List[np.ndarray]:
+    def __get_pafs_groundtruth(self, crowd: Crowd) -> np.ndarray:
         num_people = len(crowd)
         connections = [[1, 2], [2, 3], [4, 5], [5, 6], [14, 1], [14, 4], [7, 8], [8, 9], [10, 11], [11, 12],
                        [13, 14]]
@@ -43,6 +43,7 @@ class AicAffinityField(AicGaussian):
                 person_heats.append(person_paf)
             img_heat = np.amax(person_heats, axis=0)
             connect_heats.append(img_heat)
+        connect_heats = np.asarray(connect_heats, dtype=np.float)
         return connect_heats
 
 
