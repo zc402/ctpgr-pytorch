@@ -3,6 +3,37 @@ import torch
 import torch.nn as nn
 import torchvision
 
+# top10_model = nn.Sequential(
+#             nn.Conv2d(3, 64, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(64, 64, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#
+#             nn.Conv2d(64, 128, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(128, 128, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#
+#             nn.Conv2d(128, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#
+#             nn.Conv2d(256, 512, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(512, 512, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(512, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 14, kernel_size=3, padding=1),
+#         )
 
 class Vgg19Top10(nn.Module):
     """Top 10 Layers of VGG19 + Two conv layers"""
@@ -21,6 +52,47 @@ class Vgg19Top10(nn.Module):
         x = self.top10_model(x)
         return x
 
+# class Vgg19Top10(nn.Module):
+#     """Top 10 Layers of VGG19 + Two conv layers"""
+#     def __init__(self):
+#         super(Vgg19Top10, self).__init__()
+#         self.top10_model = nn.Sequential(
+#             nn.Conv2d(3, 64, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(64, 64, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#
+#             nn.Conv2d(64, 128, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(128, 128, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#
+#             nn.Conv2d(128, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.MaxPool2d(kernel_size=2, stride=2),
+#
+#             nn.Conv2d(256, 512, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(512, 512, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(512, 256, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(256, 128, kernel_size=3, padding=1),
+#             nn.ReLU(inplace=True),
+#         )
+#
+#     def forward(self, x):
+#         x = self.top10_model(x)
+#         return x
+
 class StageOne(nn.Module):
     """The stage 1 of PAFs Network"""
     def __init__(self, in_channels, num_classes):
@@ -35,7 +107,7 @@ class StageOne(nn.Module):
 
             nn.Conv2d(128, 512, kernel_size=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(512, num_classes, kernel_size=1)
+            nn.Conv2d(512, num_classes, kernel_size=1),
         )
 
     def forward(self, x):
@@ -59,7 +131,7 @@ class StageT(nn.Module):
 
             nn.Conv2d(128, 128, kernel_size=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, num_classes, kernel_size=1)
+            nn.Conv2d(128, num_classes, kernel_size=1),
         )
 
     def forward(self, x):
@@ -119,6 +191,6 @@ class PAFsLoss(nn.Module):
         pred = torch.cat((pred_b1, pred_b2), dim=2)
         gt = torch.cat((gt_pcm, gt_paf), dim=2)
         square = (pred - gt) ** 2
-        sum_over_one_batch = torch.sum(square, dim=(1, 2, 3, 4))  # Shape (N)
+        sum_over_one_batch = torch.sum(square, dim=(3, 4))  # Shape (N)
         mean = sum_over_one_batch.mean()
         return mean

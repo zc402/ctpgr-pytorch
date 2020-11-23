@@ -43,6 +43,8 @@ class AicNative(Dataset):
         return len(self.__labels)
 
     def __getitem__(self, index) -> dict:
+        # TODO: debug 只练一张
+        index = 3
         image_name = self.__labels[index]["image_id"] + ".jpg"
         image_path = self.__paths["current", "images"] / image_name
         native_image = cv2.imread(str(image_path))

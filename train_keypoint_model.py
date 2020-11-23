@@ -3,20 +3,25 @@ import torch
 
 from torch.utils.data import DataLoader
 import torch.optim as optim
+from torch import nn
 from pathlib import Path
 import visdom
-from pafs_network import PAFsNetwork
-from pafs_network import PAFsLoss
+import cv2
+
+from networks.pafs_network import PAFsNetwork
+# from networks.pafs_resnet import ResnetPAFs
+from networks.pafs_network import PAFsLoss
 from aichallenger import AicNorm
+
 
 class Trainer:
     def __init__(self, batch_size, debug_mode):
         # self.debug_mode:
         #    Set num_worker to 0. Otherwise pycharm debug won't work due to multithreading.
-        #    Set batch_size to 1, ignore the argument given.
         self.debug_mode = debug_mode
         self.epochs = 100
         self.val_step = 500
+        self.batch_size = batch_size
         self.vis = visdom.Visdom()
 
         if torch.cuda.is_available():
@@ -24,7 +29,7 @@ class Trainer:
         else:
             print("GPU not available! running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model_pose = PAFsNetwork(b1_classes=14, b2_classes=11)
+        self.model_pose = PAFsNetwork(14, 11)
         self.model_pose.to(self.device, dtype=torch.float)
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
@@ -32,10 +37,10 @@ class Trainer:
         self.loss_model = PAFsLoss()
 
         if self.debug_mode:
-            self.batch_size = 1
+            # self.batch_size = 1
             workers = 0
         else:
-            self.batch_size = batch_size
+            # self.batch_size = batch_size
             workers = 4
 
         train_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=True,
@@ -45,7 +50,7 @@ class Trainer:
 
         test_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=False,
                                resize_img_size=(512, 512), heat_size=(64, 64))
-        self.val_loader = DataLoader(test_dataset, 1, shuffle=False, num_workers=workers, pin_memory=True,
+        self.val_loader = DataLoader(test_dataset, self.batch_size, shuffle=False, num_workers=workers, pin_memory=True,
                                      drop_last=True)
         self.val_iter = iter(self.val_loader)
 
@@ -75,16 +80,33 @@ class Trainer:
             inputs["norm_aug_img"] = inputs["norm_aug_img"].to(self.device, dtype=torch.float)
             inputs["gau_vis"] = inputs["gau_vis"].to(self.device, dtype=torch.float)
             inputs["pafs"] = inputs["pafs"].to(self.device, dtype=torch.float)
-            loss, _, _ = self.process_batch(inputs)
+            loss, b1_out, b2_out = self.process_batch(inputs)
             self.model_optimizer.zero_grad()
             loss.backward()
             self.model_optimizer.step()
+            # Clear visdom environment
+            if self.step == 0:
+                self.vis.close()
+            # Validate
             if self.step % self.val_step == 0:
-                self.val()
+                # self.val()
                 self.save_model()
 
             if self.step % 50 == 0:
                 print("step {}; Loss {}".format(self.step, loss.item()))
+
+            # Show training materials
+            if self.step % self.val_step == 0:
+                pred_pcm_amax = np.amax(b1_out[0].cpu().detach().numpy(), axis=0)  # HW
+                gt_pcm_amax = np.amax(inputs["gau_vis"][0].cpu().detach().numpy(), axis=0)
+                pred_paf_amax = np.amax(b2_out[0].cpu().detach().numpy(), axis=0)
+                gt_paf_amax = np.amax(inputs["pafs"][0].cpu().detach().numpy(), axis=0)
+                self.vis.image(inputs["norm_aug_img"][0].cpu().detach().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
+                self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
+                self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
+                self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
+                self.vis.heatmap(np.flipud(gt_paf_amax), win="GT-PAF", opts={'title': "GT-PAF"})
+                self.vis.line(X=np.array([self.step]), Y=loss.cpu().detach().numpy()[np.newaxis], win='Loss', update='append')
 
             self.step += 1
 
@@ -92,6 +114,7 @@ class Trainer:
         """Validate the model on a single minibatch
         """
         self.set_eval()
+
         try:
             inputs = next(self.val_iter)
         except StopIteration:
@@ -107,12 +130,12 @@ class Trainer:
         gt_pcm_amax = np.amax(inputs["gau_vis"][0].cpu().numpy(), axis=0)
         pred_paf_amax = np.amax(b2_out[0].cpu().numpy(), axis=0)
         gt_paf_amax = np.amax(inputs["pafs"][0].cpu().numpy(), axis=0)
-
+        # Image augmentation disabled due to test phase
         self.vis.image(inputs["norm_aug_img"][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
-        self.vis.heatmap(pred_pcm_amax, win="Pred-PCM", opts={'title': "Pred-PCM"})
-        self.vis.heatmap(gt_pcm_amax, win="GT-PCM", opts={'title': "GT-PCM"})
-        self.vis.heatmap(pred_paf_amax, win="Pred-PAF", opts={'title': "Pred-PAF"})
-        self.vis.heatmap(gt_paf_amax, win="GT-PAF", opts={'title': "GT-PAF"})
+        self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
+        self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
+        self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
+        self.vis.heatmap(np.flipud(gt_paf_amax), win="GT-PAF", opts={'title': "GT-PAF"})
         self.vis.line(X=np.array([self.step]), Y=loss.cpu().numpy()[np.newaxis], win='Loss', update='append')
         self.set_train()
 
@@ -128,7 +151,6 @@ class Trainer:
         b2_stack = torch.stack(b2_stages, dim=1)
 
         loss = self.loss_model(b1_stack, b2_stack, gt_pcm, gt_paf)
-
         return loss, b1_out, b2_out
 
     def save_model(self):
@@ -145,7 +167,7 @@ class Trainer:
 
 
 def main():
-    Trainer(batch_size=5, debug_mode=True).train()
+    Trainer(batch_size=4, debug_mode=False).train()
 
 
 if __name__ == "__main__":

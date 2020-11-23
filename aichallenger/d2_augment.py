@@ -84,8 +84,8 @@ class AicAugment(AicResize):
         seq = iaa.Sequential([
             iaa.Multiply((0.8, 1.5)),  # change brightness
             iaa.Affine(
-                rotate=(-30, 30),
-                scale=(0.7, 1.3),
+                rotate=(-10, 10),
+                scale=(0.8, 1.2),
                 translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
             )
         ])

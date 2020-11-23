@@ -33,8 +33,8 @@ class AicAffinityField(AicGaussian):
             for p in range(num_people):
                 vis1 = crowd[p].joints[j1].v
                 vis2 = crowd[p].joints[j2].v
-                p1 = (crowd[p].joints[j1].x, self.resize_img_size[1] - crowd[p].joints[j1].y)
-                p2 = (crowd[p].joints[j2].x, self.resize_img_size[1] - crowd[p].joints[j2].y)
+                p1 = (crowd[p].joints[j1].x, crowd[p].joints[j1].y)
+                p2 = (crowd[p].joints[j2].x, crowd[p].joints[j2].y)
 
                 if vis1 == 1 and vis2 == 1:  # Both visible
                     person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
