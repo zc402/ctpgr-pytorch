@@ -3,13 +3,12 @@ import torch
 
 from torch.utils.data import DataLoader
 import torch.optim as optim
-from torch import nn
 from pathlib import Path
 import visdom
 import cv2
 
 from networks.pafs_network import PAFsNetwork
-# from networks.pafs_resnet import ResnetPAFs
+from networks.pafs_resnet import ResnetPAFs
 from networks.pafs_network import PAFsLoss
 from aichallenger import AicNorm
 
@@ -23,13 +22,16 @@ class Trainer:
         self.val_step = 500
         self.batch_size = batch_size
         self.vis = visdom.Visdom()
+        self.img_key = "norm_aug_img"
+        self.pcm_key = "gau_vis_or_not"
+        self.paf_key = "pafs_vis_or_not"
 
         if torch.cuda.is_available():
             print("GPU available.")
         else:
             print("GPU not available! running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model_pose = PAFsNetwork(14, 11)
+        self.model_pose = ResnetPAFs()
         self.model_pose.to(self.device, dtype=torch.float)
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
@@ -77,9 +79,9 @@ class Trainer:
 
         self.set_train()
         for batch_idx, inputs in enumerate(self.train_loader):
-            inputs["norm_aug_img"] = inputs["norm_aug_img"].to(self.device, dtype=torch.float)
-            inputs["gau_vis"] = inputs["gau_vis"].to(self.device, dtype=torch.float)
-            inputs["pafs"] = inputs["pafs"].to(self.device, dtype=torch.float)
+            inputs[self.img_key] = inputs[self.img_key].to(self.device, dtype=torch.float)
+            inputs[self.pcm_key] = inputs[self.pcm_key].to(self.device, dtype=torch.float)
+            inputs[self.paf_key] = inputs[self.paf_key].to(self.device, dtype=torch.float)
             loss, b1_out, b2_out = self.process_batch(inputs)
             self.model_optimizer.zero_grad()
             loss.backward()
@@ -98,10 +100,10 @@ class Trainer:
             # Show training materials
             if self.step % self.val_step == 0:
                 pred_pcm_amax = np.amax(b1_out[0].cpu().detach().numpy(), axis=0)  # HW
-                gt_pcm_amax = np.amax(inputs["gau_vis"][0].cpu().detach().numpy(), axis=0)
+                gt_pcm_amax = np.amax(inputs[self.pcm_key][0].cpu().detach().numpy(), axis=0)
                 pred_paf_amax = np.amax(b2_out[0].cpu().detach().numpy(), axis=0)
-                gt_paf_amax = np.amax(inputs["pafs"][0].cpu().detach().numpy(), axis=0)
-                self.vis.image(inputs["norm_aug_img"][0].cpu().detach().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
+                gt_paf_amax = np.amax(inputs[self.paf_key][0].cpu().detach().numpy(), axis=0)
+                self.vis.image(inputs[self.img_key][0].cpu().detach().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
                 self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
                 self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
                 self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
@@ -121,17 +123,17 @@ class Trainer:
             self.val_iter = next(self.val_iter)
             inputs = self.val_iter.next()
 
-        inputs_gpu = {"norm_aug_img": inputs["norm_aug_img"].to(self.device, dtype=torch.float),
-                      "gau_vis": inputs["gau_vis"].to(self.device, dtype=torch.float),
-                      "pafs": inputs["pafs"].to(self.device, dtype=torch.float)}
+        inputs_gpu = {self.img_key: inputs[self.img_key].to(self.device, dtype=torch.float),
+                      self.pcm_key: inputs[self.pcm_key].to(self.device, dtype=torch.float),
+                      self.paf_key: inputs[self.paf_key].to(self.device, dtype=torch.float)}
         with torch.no_grad():
             loss, b1_out, b2_out = self.process_batch(inputs_gpu)
         pred_pcm_amax = np.amax(b1_out[0].cpu().numpy(), axis=0)  # HW
-        gt_pcm_amax = np.amax(inputs["gau_vis"][0].cpu().numpy(), axis=0)
+        gt_pcm_amax = np.amax(inputs[self.pcm_key][0].cpu().numpy(), axis=0)
         pred_paf_amax = np.amax(b2_out[0].cpu().numpy(), axis=0)
-        gt_paf_amax = np.amax(inputs["pafs"][0].cpu().numpy(), axis=0)
+        gt_paf_amax = np.amax(inputs[self.paf_key][0].cpu().numpy(), axis=0)
         # Image augmentation disabled due to test phase
-        self.vis.image(inputs["norm_aug_img"][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
+        self.vis.image(inputs[self.img_key][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
         self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
         self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
         self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
@@ -142,10 +144,10 @@ class Trainer:
     def process_batch(self, inputs):
         """Pass a minibatch through the network and generate images and losses
         """
-        b1_stages, b2_stages, b1_out, b2_out = self.model_pose(inputs["norm_aug_img"])
-        gt_pcm = inputs["gau_vis"]  # ["heatmap"]: {"vis_or_not": NJHW, "visible": NJHW}
+        b1_stages, b2_stages, b1_out, b2_out = self.model_pose(inputs[self.img_key])
+        gt_pcm = inputs[self.pcm_key]  # ["heatmap"]: {"vis_or_not": NJHW, "visible": NJHW}
         gt_pcm = gt_pcm.unsqueeze(1)
-        gt_paf = inputs["pafs"]
+        gt_paf = inputs[self.paf_key]
         gt_paf = gt_paf.unsqueeze(1)
         b1_stack = torch.stack(b1_stages, dim=1)  # Shape (N, Stage, C, H, W)
         b2_stack = torch.stack(b2_stages, dim=1)

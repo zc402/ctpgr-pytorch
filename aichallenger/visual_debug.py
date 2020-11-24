@@ -15,13 +15,13 @@ class VisualDebug:
         self.res_dict = train_dataset[1]
 
     def show(self):
-
+        self.vis.close()
         self._show_bgr_uint8('resized_img')
         self.vis.image(self.res_dict['norm_aug_img'][::-1, ...], win='norm_aug_img', opts={'title': 'norm_aug_img'})
         self._show_bgr_uint8('img_before_aug')
         self._show_bgr_uint8('img_after_aug')
-        self._show_heat_amax_float('gau_vis')
-        self._show_heat_amax_float('pafs')
+        self._show_heat_amax_float('gau_vis_or_not')
+        self._show_heat_amax_float('pafs_vis_or_not')
 
     def _show_bgr_uint8(self, name: str):
         # Expected input shape: HWC uint8
@@ -29,7 +29,7 @@ class VisualDebug:
 
     def _show_heat_amax_float(self, name: str):
         # Expected input shape: CHW float
-        self.vis.heatmap(np.flipud(np.amax(self.res_dict[name], axis=0), win=name, opts={'title': name}))
+        self.vis.heatmap(np.flipud(np.amax(self.res_dict[name], axis=0)), win=name, opts={'title': name})
 
 if __name__ == '__main__':
     VisualDebug().show()

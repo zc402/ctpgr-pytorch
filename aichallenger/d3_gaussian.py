@@ -64,20 +64,6 @@ class AicGaussian(AicAugment):
 
         return heat_dict
 
-    # def __show_gaussian_map(self, img, heat):
-    #     conf_gray_map = np.amax(heat["vis_or_not"], axis=0)
-    #     vis_gray_map = np.amax(heat["visible"], axis=0)
-    #
-    #     plt.close('all')
-    #     fig, ax = plt.subplots(2, 2)
-    #     img = np.asarray(img)
-    #     ax[0][0].imshow(img)
-    #     ax[1][0].imshow(conf_gray_map)
-    #     ax[1][1].imshow(vis_gray_map)
-    #     plt.show()
-    #     plt.pause(10)
-
-
 # Generate a Gaussian point on black image.
 class GaussianPoint:
 

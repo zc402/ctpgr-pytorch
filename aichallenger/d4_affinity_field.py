@@ -17,11 +17,17 @@ class AicAffinityField(AicGaussian):
 
     def __getitem__(self, index) -> dict:
         res_dict = super().__getitem__(index)
-        pafs = self.__get_pafs_groundtruth(res_dict["aug_label"])
-        res_dict["pafs"] = pafs
+        res_dict["pafs_vis"] = self.__get_pafs_groundtruth(res_dict["aug_label"], vis_only=True)
+        res_dict["pafs_vis_or_not"] = self.__get_pafs_groundtruth(res_dict["aug_label"], vis_only=False)
         return res_dict
 
-    def __get_pafs_groundtruth(self, crowd: Crowd) -> np.ndarray:
+    def __get_pafs_groundtruth(self, crowd: Crowd, vis_only=True) -> np.ndarray:
+        """
+        Part Affinity Field Groundtruth
+        :param crowd:
+        :param vis_only: uses 'visible' keypoints if True, otherwise uses 'vis_or_not' keypoints
+        :return:
+        """
         num_people = len(crowd)
         connections = [[1, 2], [2, 3], [4, 5], [5, 6], [14, 1], [14, 4], [7, 8], [8, 9], [10, 11], [11, 12],
                        [13, 14]]
@@ -36,10 +42,17 @@ class AicAffinityField(AicGaussian):
                 p1 = (crowd[p].joints[j1].x, crowd[p].joints[j1].y)
                 p2 = (crowd[p].joints[j2].x, crowd[p].joints[j2].y)
 
-                if vis1 == 1 and vis2 == 1:  # Both visible
-                    person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
-                else:
-                    person_paf = zero_heat
+                if vis_only:  # Only use visible points. Do not use points which is outside image
+                    if vis1 == 1 and vis2 == 1:  # Both visible
+                        person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
+                    else:
+                        person_paf = zero_heat
+                else:  # Use visible and occluded points. Do not use points which is outside image
+                    if (vis1 == 1 or vis1 == 2) and (vis2 == 1 or vis2 == 2):  # Both on image (vis or occluded)
+                        person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
+                    else:
+                        person_paf = zero_heat
+
                 person_heats.append(person_paf)
             img_heat = np.amax(person_heats, axis=0)
             connect_heats.append(img_heat)
