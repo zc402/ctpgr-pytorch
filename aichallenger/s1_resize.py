@@ -1,4 +1,4 @@
-from aichallenger.d0_native import AicNative
+from aichallenger import AicNative
 from pathlib import Path
 import cv2
 import numpy as np

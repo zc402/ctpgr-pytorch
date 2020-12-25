@@ -11,7 +11,7 @@ from networks.pafs_network import PAFsNetwork
 from networks.pafs_resnet import ResnetPAFs
 from networks.pafs_network import PAFsLoss
 from aichallenger import AicNorm
-
+from constants.keypoints import aic_bones
 
 class Trainer:
     def __init__(self, batch_size, debug_mode):
@@ -31,11 +31,11 @@ class Trainer:
         else:
             print("GPU not available! running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model_pose = ResnetPAFs()
+        self.model_pose = PAFsNetwork(14, len(aic_bones))
         self.model_pose.to(self.device, dtype=torch.float)
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
-        self.model_path = Path("pose_model.pt")
+        self.model_path = Path("../checkpoints/pose_model.pt")
         self.loss_model = PAFsLoss()
 
         if self.debug_mode:
@@ -120,8 +120,8 @@ class Trainer:
         try:
             inputs = next(self.val_iter)
         except StopIteration:
-            self.val_iter = next(self.val_iter)
-            inputs = self.val_iter.next()
+            self.val_iter = iter(self.val_loader)
+            inputs = next(self.val_iter)
 
         inputs_gpu = {self.img_key: inputs[self.img_key].to(self.device, dtype=torch.float),
                       self.pcm_key: inputs[self.pcm_key].to(self.device, dtype=torch.float),
@@ -132,7 +132,7 @@ class Trainer:
         gt_pcm_amax = np.amax(inputs[self.pcm_key][0].cpu().numpy(), axis=0)
         pred_paf_amax = np.amax(b2_out[0].cpu().numpy(), axis=0)
         gt_paf_amax = np.amax(inputs[self.paf_key][0].cpu().numpy(), axis=0)
-        # Image augmentation disabled due to test phase
+        # Image augmentation disabled due to pred phase
         self.vis.image(inputs[self.img_key][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
         self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
         self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})

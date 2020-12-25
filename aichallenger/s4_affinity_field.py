@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
-
+from constants.keypoints import aic_bones
 
 class AicAffinityField(AicGaussian):
     """
@@ -29,9 +29,7 @@ class AicAffinityField(AicGaussian):
         :return:
         """
         num_people = len(crowd)
-        connections = [[1, 2], [2, 3], [4, 5], [5, 6], [14, 1], [14, 4], [7, 8], [8, 9], [10, 11], [11, 12],
-                       [13, 14]]
-        connections = np.asarray(connections, np.int) - 1
+        connections = np.asarray(aic_bones, np.int) - 1
         zero_heat = np.zeros((self.heat_size[1], self.heat_size[0]), np.float)
         connect_heats = []  # Expected shape: (connections, H, W)
         for j1, j2 in connections:
