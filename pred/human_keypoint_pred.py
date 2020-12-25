@@ -3,11 +3,13 @@ from pathlib import Path
 import torch
 import numpy as np
 from networks.pafs_resnet import ResnetPAFs
+from networks.pafs_network import PAFsNetwork
 from constants.enum_keys import PG
+from constants.keypoints import aic_bones
 
 class HumanKeypointPredict:
     def __init__(self):
-        self.model_pose = ResnetPAFs()
+        self.model_pose = PAFsNetwork(14, len(aic_bones))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model_pose.to(self.device, dtype=torch.float)
         self.model_path = Path("../checkpoints/pose_model.pt")

@@ -10,4 +10,5 @@ class PG(Enum):
     COORD_NORM = auto()  # normalized keypoint x,y 0.~1.
 
     BONE_LENGTH = auto()  # length of bones
-    BONE_ANGLE = auto()  # angle of bones
+    BONE_ANGLE_SIN = auto()  # angle of bones
+    BONE_ANGLE_COS = auto()

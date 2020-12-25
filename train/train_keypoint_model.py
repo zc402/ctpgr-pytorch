@@ -169,7 +169,7 @@ class Trainer:
 
 
 def main():
-    Trainer(batch_size=4, debug_mode=False).train()
+    Trainer(batch_size=2, debug_mode=False).train()
 
 
 if __name__ == "__main__":

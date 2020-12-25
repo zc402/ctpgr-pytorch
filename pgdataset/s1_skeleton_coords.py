@@ -38,12 +38,14 @@ class SkeletonCoords(LabelLoader):
     def __save_coords(self, video_name, coords):
         pkl_path = self.coord_folder / video_name
         pkl_path = pkl_path.with_suffix('.pkl')
-        pickle.dump(coords, pkl_path)
+        with pkl_path.open('wb') as pickle_file:
+            pickle.dump(coords, pickle_file)
 
     def __load_coords(self, video_name):
         pkl_path = self.coord_folder / video_name
         pkl_path = pkl_path.with_suffix('.pkl')
-        coords = pickle.load(pkl_path)
+        with pkl_path.open('rb') as pickle_file:
+            coords = pickle.load(pickle_file)
         return coords
 
     def __predict_from_video(self, video_name):
