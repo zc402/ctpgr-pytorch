@@ -39,6 +39,7 @@ class HumanKeypointPredict:
         xs, ys = np.unravel_index(max_indices, b1[0].shape)  # (array([x, x, x]), array([y, y, y]))
         xs_norm, ys_norm = xs / chw_shape[2], ys / chw_shape[1]
         results = {PG.COORD_NATIVE: (xs, ys), PG.COORD_NORM: (xs_norm, ys_norm)}
+        # NATIVE shape: (xy(2), num_keypoints)
         return results
 
     def __load_model(self):

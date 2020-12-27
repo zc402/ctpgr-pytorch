@@ -28,11 +28,10 @@ class SkeletonCoords(LabelLoader):
         return res_dict
 
     def __vpath_to_coords(self, video_name: str):
-        coord_path = self.coord_folder / video_name
-        if not coord_path.exists():
+        coord_dict = self.__load_coords(video_name)
+        if coord_dict is None:
             coord_dict = self.__predict_from_video(video_name)
             self.__save_coords(video_name, coord_dict)
-        coord_dict = self.__load_coords(video_name)
         return coord_dict
 
     def __save_coords(self, video_name, coords):
@@ -44,6 +43,8 @@ class SkeletonCoords(LabelLoader):
     def __load_coords(self, video_name):
         pkl_path = self.coord_folder / video_name
         pkl_path = pkl_path.with_suffix('.pkl')
+        if not pkl_path.exists():
+            return None
         with pkl_path.open('rb') as pickle_file:
             coords = pickle.load(pickle_file)
         return coords
@@ -54,12 +55,16 @@ class SkeletonCoords(LabelLoader):
         v_path = self.video_folder / video_name
 
         v_reader = self.__video_reader(v_path)
-        coord_list = []
+        native_list = []  # shape: (num_frames, xy(2), num_keypoints)
+        norm_list = []  # shape: (num_frames, xy(2), num_keypoints)
         for i, frame in enumerate(v_reader):
             coord_dict = self.predictor.get_coordinates(frame)
-            coord_list.append(coord_dict)
-            print('Predicting:' + str(i))
-        return coord_list
+            native_list.append(coord_dict[PG.COORD_NATIVE])
+            norm_list.append(coord_dict[PG.COORD_NORM])
+            print('Predicting %s: %d' % (video_name, i))
+        native_list = np.asarray(native_list)
+        norm_list = np.asarray(norm_list)
+        return {PG.COORD_NATIVE: native_list, PG.COORD_NORM: norm_list}
 
     def __video_reader(self, video_path):
 
