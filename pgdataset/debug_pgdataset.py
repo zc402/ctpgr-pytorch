@@ -3,9 +3,9 @@ from pathlib import Path
 import visdom
 import numpy as np
 from torch.utils.data import DataLoader
-from pgdataset.s1_skeleton_coords import SkeletonCoords
+from pgdataset.s1_skeleton_coords import SkeletonCoordsDataset
 
-ds = SkeletonCoords(Path.home() / 'PoliceGestureLong', is_train=True, resize_img_size=(512, 512))
+ds = SkeletonCoordsDataset(Path.home() / 'PoliceGestureLong', is_train=True, resize_img_size=(512, 512))
 loader = DataLoader(ds, batch_size=1, shuffle=True, num_workers=0, collate_fn=lambda x: x)
 it = iter(loader)
 for n in range(1):

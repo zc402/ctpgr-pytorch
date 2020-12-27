@@ -7,13 +7,14 @@ import numpy as np
 from pgdataset.s0_label_loader import LabelLoader
 from constants.enum_keys import PG
 
-class SkeletonCoords(LabelLoader):
+
+class SkeletonCoordsDataset(LabelLoader):
     """Load coords from disk if exists, else predict coords."""
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple):
         super().__init__(data_path, is_train)
         self.resize_img_size = resize_img_size
         if not is_train:
-            raise NotImplementedError('the train skeletons are save in /generated/coords, logic of saving test skeletons not implemented')
+            raise NotImplementedError('the train skeletons are save in /generated/coords, logic of saving unit_test skeletons not implemented')
         self.coord_folder = Path("../generated/coords/")
         self.video_folder = data_path / "train"
         self.coord_folder.mkdir(parents=True, exist_ok=True)
