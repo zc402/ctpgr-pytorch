@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
-
+import imgaug.augmenters as iaa
+from imgaug.augmentables import Keypoint, KeypointsOnImage, BoundingBox, BoundingBoxesOnImage
 
 class AicResize(AicNative):
     """
@@ -14,69 +15,92 @@ class AicResize(AicNative):
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, **kwargs):
         super().__init__(data_path, is_train, **kwargs)
         self.resize_img_size = resize_img_size
-        self.__fix_ratio_resize = FixRatioImgResize(resize_img_size)
+        # self.__fix_ratio_resize = FixRatioImgResize(resize_img_size)
+        self.rkr = ResizeKeepRatio(resize_img_size)
 
     def __getitem__(self, index) -> dict:
         res_dict = super().__getitem__(index)
         # 图像Resize至网络输入大小
-        resized_image, ratio = self.__fix_ratio_resize.resize(res_dict['native_img'])
+        # resized_image, ratio = self.__fix_ratio_resize.resize(res_dict['native_img'])
+        #
+        # # 将人物关键点Resize
+        # resized_crowd: List[Person] = []
+        # for person in res_dict['native_label']:
+        #     new_person = self.__resize_person_labels(person, ratio)
+        #     resized_crowd.append(new_person)
+        #
+        # res_dict['resized_img'] = resized_image
+        # res_dict['resized_label'] = resized_crowd
+        img = res_dict['native_img']
+        crowd = res_dict['native_label']
 
-        # 将人物关键点Resize
-        resized_crowd: List[Person] = []
-        for person in res_dict['native_label']:
-            new_person = self.__resize_person_labels(person, ratio)
-            resized_crowd.append(new_person)
+        boxes = np.asarray([p.box for p in crowd], np.int)
+        joints = np.asarray([[[j.x, j.y] for j in p.joints] for p in crowd], np.int)
 
-        res_dict['resized_img'] = resized_image
-        res_dict['resized_label'] = resized_crowd
+        img_aug, np_kps_aug, np_boxes_aug = self.rkr.resize(img, joints, boxes)
+
+        num_people: int = len(crowd)
+        num_joints: int = len(crowd[0].joints)
+        aug_labels: Crowd = []
+        for p in range(num_people):
+            np_box = np_boxes_aug[p]
+            box = Box(*np_box)
+            joints = []
+            for j in range(num_joints):
+                v = crowd[p].joints[j].v
+                x, y = np_kps_aug[p][j]
+                joint = Joint(x, y, v)
+                joints.append(joint)
+            person = Person(box, joints)
+            aug_labels.append(person)
+        res_dict['resized_img'] = img_aug
+        res_dict['resized_label'] = aug_labels
 
         return res_dict
 
-    @staticmethod
-    def __resize_person_labels(person: Person, ratio: float) -> Person:
-        new_joints = [Joint(round(j.x * ratio), round(j.y * ratio), j.v) for j in person.joints]
-        new_box = Box(*[round(c * ratio) for c in person.box])
-        new_person = Person(box=new_box, joints=new_joints)
-        return new_person
+class ResizeKeepRatio:
+    def __init__(self, target_size: tuple):
+        self.target_size = target_size
+        assert len(self.target_size) == 2, 'Expect tuple (w, h) for target size'
+
+    def resize(self, img, pts: np.ndarray, boxes: np.ndarray):
+        pts_shape = pts.shape
+        pts = pts.reshape((-1, 2))
+        boxes_shape = boxes.shape
+        boxes = boxes.reshape((-1, 4))
+        old_kps = [Keypoint(x,y) for x,y in pts]
+        old_boxes = [BoundingBox(x1, y1, x2, y2) for x1, y1, x2, y2 in boxes]
+
+        tw, th = self.target_size
+        ih, iw, ic = img.shape
+        kps_on_image = KeypointsOnImage(old_kps, shape=img.shape)
+        boxes_on_img = BoundingBoxesOnImage(old_boxes, shape=img.shape)
+        seq = self.__aug_sequence((iw, ih), (tw, th))
+        det = seq.to_deterministic()
+        img_aug = det.augment_image(img)
+        kps_aug = det.augment_keypoints(kps_on_image)
+        boxes_aug = det.augment_bounding_boxes(boxes_on_img)
+        np_kps_aug = np.array([(p.x, p.y) for p in kps_aug])
+        np_kps_aug = np_kps_aug.reshape(pts_shape)
+        np_boxes_aug = np.array([(p.x1, p.y1, p.x2, p.y2) for p in boxes_aug])
+        np_boxes_aug = np_boxes_aug.reshape(boxes_shape)
+        return img_aug, np_kps_aug, np_boxes_aug
 
 
-class FixRatioImgResize:
-    """
-    Load and resize image with original ratio fixed
-    """
-
-    def __init__(self, new_size: tuple):
-        self.new_size = new_size
-        assert len(self.new_size) == 2, "incorrect new_size shape, should be (w,h)"
-
-    def resize(self, native_img: np.ndarray) -> Tuple[np.ndarray, float]:
-        """
-        Resize image with fixed ratio and black padding
-        :param native_img: PIL Image
-        :param new_size: (new_w, new_h)
-        :return: (new_image, ratio)
-        ratio is new/native
-        """
-        new_w, new_h = self.new_size  # 预计输入网络的图片尺寸
-        w_div_h = new_w / new_h  # w divide by h
-        native_h, native_w = native_img.shape[:2]  # 原始图片尺寸
-        native_w_div_h = native_w / native_h
-        if native_w_div_h > w_div_h:
-            # 原图比例宽边为主，需缩短/拉伸宽边到新图宽边
-            ratio = new_w / native_w  # 新图/原图 的比例
-            resized_w = new_w  # 原始图片缩放后Padding之前的尺寸
-            resized_h = native_h * ratio
+    def __aug_sequence(self, input_size, target_size):
+        iw, ih = input_size
+        i_ratio = iw / ih
+        tw, th = target_size
+        t_ratio = tw / th
+        if i_ratio > t_ratio:
+            # Input image wider than target, resize width to target width
+            resize_aug = iaa.Resize({"width": tw, "height": "keep-aspect-ratio"})
         else:
-            # 原图比例高边为主，缩短/拉伸高边到新图高边
-            ratio = new_h / native_h
-            resized_w = native_w * ratio
-            resized_h = new_h
+            # Input image higher than target, resize height to target height
+            resize_aug = iaa.Resize({"width": "keep-aspect-ratio", "height": th})
+        pad_aug = iaa.PadToFixedSize(width=tw, height=th, position="center")
+        seq = iaa.Sequential([resize_aug, pad_aug])
+        return seq
 
-        resized_image = cv2.resize(native_img, tuple((int(resized_w), int(resized_h))), interpolation=cv2.INTER_LINEAR)
-        channels = native_img.shape[2]
-        canvas = np.zeros((new_w, new_h, channels), dtype=np.uint8)
-        # Paste
-        canvas[:resized_image.shape[0], :resized_image.shape[1]] = resized_image
-        return canvas, ratio
 
 

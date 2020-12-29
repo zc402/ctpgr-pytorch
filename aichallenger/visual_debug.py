@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader
 import torch
 from aichallenger import AicNorm
 
-# TODO: Check resize bugs
 class VisualDebug:
     def __init__(self):
         self.vis = visdom.Visdom()

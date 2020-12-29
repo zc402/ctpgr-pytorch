@@ -7,9 +7,9 @@ from pathlib import Path
 import visdom
 import cv2
 
-from networks.pafs_network import PAFsNetwork
-from networks.pafs_resnet import ResnetPAFs
-from networks.pafs_network import PAFsLoss
+from models.pafs_network import PAFsNetwork
+from models.pafs_resnet import ResnetPAFs
+from models.pafs_network import PAFsLoss
 from aichallenger import AicNorm
 from constants.keypoints import aic_bones
 
@@ -164,8 +164,9 @@ class Trainer:
         if Path.is_file(self.model_path):
             checkpoint = torch.load(self.model_path)
             self.model_pose.load_state_dict(checkpoint)
+            print("Previous ckpt loaded at ", self.model_path)
         else:
-            print("No model file found.")
+            print("No ckpt file found.")
 
 
 def main():

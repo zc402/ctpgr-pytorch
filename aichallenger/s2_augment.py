@@ -40,7 +40,7 @@ class AicAugment(AicResize):
         num_joints: int = len(crowd[0].joints)
 
         boxes = [p.box for p in crowd]
-        joints = [[[(j.x, j.y)] for j in p.joints] for p in crowd]
+        joints = [[[j.x, j.y] for j in p.joints] for p in crowd]
 
         boxes_flat = np.array(boxes, np.int).reshape(-1, 4)
         joints_flat = np.array(joints, np.int).reshape(-1, 2)
@@ -51,7 +51,7 @@ class AicAugment(AicResize):
         aug_img, aug_pts, aug_boxes, debug_dict = self.__aug_with_points(image, pts_before_aug, bbs_before_aug)
 
         np_aug_pts_flat = np.array([(p.x, p.y) for p in aug_pts])
-        np_aug_boxes = np.array([(p.x1, p.x2, p.y1, p.y2) for p in aug_boxes])
+        np_aug_boxes = np.array([(p.x1, p.y1, p.x2, p.y2) for p in aug_boxes])
         # Recover flattened points
 
         aug_joints = np_aug_pts_flat.reshape((num_people, num_joints, 2))

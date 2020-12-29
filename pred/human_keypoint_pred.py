@@ -2,8 +2,8 @@ from pathlib import Path
 
 import torch
 import numpy as np
-from networks.pafs_resnet import ResnetPAFs
-from networks.pafs_network import PAFsNetwork
+from models.pafs_resnet import ResnetPAFs
+from models.pafs_network import PAFsNetwork
 from constants.enum_keys import PG
 from constants.keypoints import aic_bones
 

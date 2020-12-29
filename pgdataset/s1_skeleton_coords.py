@@ -13,10 +13,12 @@ class SkeletonCoordsDataset(LabelLoader):
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple):
         super().__init__(data_path, is_train)
         self.resize_img_size = resize_img_size
-        if not is_train:
-            raise NotImplementedError('the train skeletons are save in /generated/coords, logic of saving unit_test skeletons not implemented')
-        self.coord_folder = Path("../generated/coords/")
-        self.video_folder = data_path / "train"
+        if is_train:
+            self.coord_folder = Path("../generated/coords/train/")
+            self.video_folder = data_path / "train"
+        else:
+            self.coord_folder = Path("../generated/coords/test/")
+            self.video_folder = data_path / "test"
         self.coord_folder.mkdir(parents=True, exist_ok=True)
         self.predictor = None  # Lazy initialize keypoint prediction model
 
