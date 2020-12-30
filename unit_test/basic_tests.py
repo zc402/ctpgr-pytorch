@@ -1,3 +1,4 @@
+import time
 import unittest
 from pathlib import Path
 
@@ -9,6 +10,13 @@ from pgdataset.s3_handcrafted_features import HandCraftedFeaturesDataset
 from pgdataset.s2_truncate import TruncateDataset
 
 class TestDataset(unittest.TestCase):
+
+    def setUp(self):
+        self.startTime = time.time()
+
+    def tearDown(self):
+        t = time.time() - self.startTime
+        print('%s: %.3f' % (self.id(), t))
 
     def test_hkd_s0(self):
         ds = AicNative(Path.home() / "AI_challenger_keypoint", is_train=True)
@@ -76,4 +84,5 @@ class TestDataset(unittest.TestCase):
         next(it)
 
 if __name__ == '__main__':
-    unittest.main()
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestDataset)
+    unittest.TextTestRunner(verbosity=0).run(suite)

@@ -18,21 +18,20 @@ from constants.keypoints import aic_bones
 
 class Trainer:
     def __init__(self, batch_size, debug_mode):
-        # self.debug_mode:
-        #    Set num_worker to 0. Otherwise pycharm debug won't work due to multithreading.
+        # self.debug_mode: Set num_worker to 0. Otherwise pycharm debug won't work due to multithreading.
         self.debug_mode = debug_mode
         self.epochs = 100
         self.val_step = 500
         self.batch_size = batch_size
         self.vis = visdom.Visdom()
-        self.img_key = "norm_aug_img"
-        self.pcm_key = "gau_vis_or_not"
-        self.paf_key = "pafs_vis_or_not"
+        self.img_key = HK.NORM_IMAGE
+        self.pcm_key = HK.PCM_ALL
+        self.paf_key = HK.PAF_ALL
 
         if torch.cuda.is_available():
             print("GPU available.")
         else:
-            print("GPU not available! running with CPU.")
+            print("GPU not available. running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model_pose = PoseEstimationModel()
 

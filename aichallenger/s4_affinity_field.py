@@ -49,4 +49,7 @@ class AicAffinityField(AicGaussian):
             debug_paf_all = paf_vis_all.max(axis=0, initial=0)  # HW
             debug_paf_all = HeatmapsOnImage(debug_paf_all, shape=self.heat_size, min_value=0.0, max_value=1.0)
             res[HK.DEBUG_PAF_ALL] = debug_paf_all.draw_on_image(res[HK.AUG_IMAGE])[0]
+            debug_paf_noocc = paf_vis_noocc.max(axis=0, initial=0)
+            debug_paf_noocc = HeatmapsOnImage(debug_paf_noocc, shape=self.heat_size, min_value=0.0, max_value=1.0)
+            res[HK.DEBUG_PAF_NOOCC] = debug_paf_noocc.draw_on_image(res[HK.AUG_IMAGE])[0]
         return res

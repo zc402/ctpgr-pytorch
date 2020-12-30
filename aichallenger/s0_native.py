@@ -31,11 +31,11 @@ class AicNative(Dataset):
         if is_train:
             with open(paths[("train", "json")]) as json_file:
                 labels = json.load(json_file)
-                paths[("current", "images")] = paths[("train", "images")]
+            paths[("current", "images")] = paths[("train", "images")]
         else:
             with open(paths[("val", "json")]) as json_file:
                 labels = json.load(json_file)
-                paths[("current", "images")] = paths[("val", "images")]
+            paths[("current", "images")] = paths[("val", "images")]
 
         self.__paths = paths
         self.__labels = labels

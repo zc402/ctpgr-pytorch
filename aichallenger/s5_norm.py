@@ -22,7 +22,7 @@ class AicNorm(AicAffinityField):
 
         # Each element in list of batch should be of equal size
         variable_len = [HK.NATIVE_IMAGE, HK.VISIBILITIES, HK.KEYPOINTS, HK.RE_KEYPOINTS, HK.AUG_KEYPOINTS,
-                        HK.HEAT_KEYPOINTS, HK.RE_BOXES, HK.AUG_BOXES]
+                        HK.HEAT_KEYPOINTS, HK.BOXES, HK.RE_BOXES, HK.AUG_BOXES]
 
         [res_dict.pop(x) for x in variable_len]
 
