@@ -1,9 +1,13 @@
+from imgaug import HeatmapsOnImage
+
 from aichallenger import AicGaussian
 from pathlib import Path
 import cv2
 import numpy as np
 from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
+
+from constants.enum_keys import HK
 from constants.keypoints import aic_bones
 
 class AicAffinityField(AicGaussian):
@@ -13,76 +17,36 @@ class AicAffinityField(AicGaussian):
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, heat_size: tuple, **kwargs):
         super().__init__(data_path, is_train, resize_img_size, heat_size, **kwargs)
         self.__paf_line_width = 2
-        self.__paf_generator = PartAffinityFieldGenerator(heat_size, self.__paf_line_width)
 
     def __getitem__(self, index) -> dict:
-        res_dict = super().__getitem__(index)
-        res_dict["pafs_vis"] = self.__get_pafs_groundtruth(res_dict["aug_label"], vis_only=True)
-        res_dict["pafs_vis_or_not"] = self.__get_pafs_groundtruth(res_dict["aug_label"], vis_only=False)
-        return res_dict
+        res = super().__getitem__(index)
+        heat_keypoints = res[HK.HEAT_KEYPOINTS]  # Shape: (PeJX) Person,Joint,X
+        visibility = res[HK.VISIBILITIES]  # Shape: (PeJ)
+        # aic_bones.shape: (BE) Bone,Endpoint
+        bones = np.array(aic_bones) - 1
+        coord = np.take(heat_keypoints, bones, axis=1)  # Shape:(Person, Bone, Endpoint, X)
+        map_PeBHW = [cv2.line(np.zeros(self.heat_size, dtype=np.uint8), (x1, y1), (x2, y2), 255, self.__paf_line_width)
+                       for x1, y1, x2, y2 in coord.reshape(-1, 4).astype(np.int)]
+        # To 0~1
+        map_PeBHW = np.asarray(map_PeBHW, dtype=np.float32) / 255.
+        map_PeBHW = map_PeBHW.reshape(coord.shape[0], coord.shape[1], self.heat_size[1], self.heat_size[0])
+        # Masks
+        j_vis = np.take(visibility, bones, axis=1)  # Shape:(Person, Bone, Endpoint)
+        j_vis_all = np.logical_or(j_vis == 1, j_vis == 2)  # Shape: (PeBE)
+        b_vis_all = np.logical_and(j_vis_all[..., 0], j_vis_all[..., 1]).astype(np.float32)  # Shape: (PeB)
+        b_vis_all = np.expand_dims(b_vis_all, (2, 3))  # Shape: (PeBHW)
+        j_vis_noocc = (j_vis == 1)  # Shape: (PeBE)
+        b_vis_noocc = np.logical_and(j_vis_noocc[..., 0], j_vis_noocc[..., 1]).astype(np.float32)  # Shape: (PeBE)
+        b_vis_noocc = np.expand_dims(b_vis_noocc, (2, 3))  # Shape: (PeBHW)
+        paf_vis_all = map_PeBHW * b_vis_all
+        paf_vis_noocc = map_PeBHW * b_vis_noocc
+        paf_vis_all = paf_vis_all.max(axis=0, initial=0)  # Shape: (BHW)
+        paf_vis_noocc = paf_vis_noocc.max(axis=0, initial=0)
+        res[HK.PAF_ALL] = paf_vis_all  # Shape: (BHW)
+        res[HK.PAF_NOT_OCC] = paf_vis_noocc
 
-    def __get_pafs_groundtruth(self, crowd: Crowd, vis_only=True) -> np.ndarray:
-        """
-        Part Affinity Field Groundtruth
-        :param crowd:
-        :param vis_only: uses 'visible' keypoints if True, otherwise uses 'vis_or_not' keypoints
-        :return:
-        """
-        num_people = len(crowd)
-        connections = np.asarray(aic_bones, np.int) - 1
-        zero_heat = np.zeros((self.heat_size[1], self.heat_size[0]), np.float)
-        connect_heats = []  # Expected shape: (connections, H, W)
-        for j1, j2 in connections:
-            person_heats = []  # Expected shape: (person, H, W)
-            for p in range(num_people):
-                vis1 = crowd[p].joints[j1].v
-                vis2 = crowd[p].joints[j2].v
-                p1 = (crowd[p].joints[j1].x, crowd[p].joints[j1].y)
-                p2 = (crowd[p].joints[j2].x, crowd[p].joints[j2].y)
-
-                if vis_only:  # Only use visible points. Do not use points which is outside image
-                    if vis1 == 1 and vis2 == 1:  # Both visible
-                        person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
-                    else:
-                        person_paf = zero_heat
-                else:  # Use visible and occluded points. Do not use points which is outside image
-                    if (vis1 == 1 or vis1 == 2) and (vis2 == 1 or vis2 == 2):  # Both on image (vis or occluded)
-                        person_paf = self.__paf_generator.gen_field_adjust_pts(p1, p2, self.resize_img_size)
-                    else:
-                        person_paf = zero_heat
-
-                person_heats.append(person_paf)
-            img_heat = np.amax(person_heats, axis=0)
-            connect_heats.append(img_heat)
-        connect_heats = np.asarray(connect_heats, dtype=np.float)
-        return connect_heats
-
-
-# Generate a line with adjustable width. (float image 0~1 ranged)
-class PartAffinityFieldGenerator:
-    def __init__(self, heat_size: Tuple[int, int], thickness: int):
-        self.thickness = thickness
-        self.heat_size = heat_size  # Heatmap image size
-
-    def gen_field(self, pt1: Tuple[int, int], pt2: Tuple[int, int]):
-        canvas = np.zeros(self.heat_size, dtype=np.uint8)
-        cv2.line(canvas, pt1, pt2, 255, self.thickness)
-
-        # Convert to [0,1]
-        canvas = canvas.astype(np.float)
-        canvas = canvas / 255.
-        return canvas
-
-    def gen_field_adjust_pts(self, pt1: Tuple[int, int], pt2: Tuple[int, int], img_size):
-        img_w, img_h = img_size
-        w, h = self.heat_size
-        ratio_w = w / img_w
-        ratio_h = h / img_h
-        new_pt1 = np.array(pt1) * (ratio_w, ratio_h)
-        new_pt1 = new_pt1.astype(np.int)
-        new_pt1 = tuple(new_pt1)
-        new_pt2 = np.array(pt2) * (ratio_w, ratio_h)
-        new_pt2 = new_pt2.astype(np.int)
-        new_pt2 = tuple(new_pt2)
-        pafs = self.gen_field(new_pt1, new_pt2)
-        return pafs
+        if 'visual_debug' in self.kwargs and self.kwargs.get('visual_debug'):
+            debug_paf_all = paf_vis_all.max(axis=0, initial=0)  # HW
+            debug_paf_all = HeatmapsOnImage(debug_paf_all, shape=self.heat_size, min_value=0.0, max_value=1.0)
+            res[HK.DEBUG_PAF_ALL] = debug_paf_all.draw_on_image(res[HK.AUG_IMAGE])[0]
+        return res

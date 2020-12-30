@@ -1,11 +1,12 @@
 from typing import List
 from torch.utils.data import Dataset, DataLoader
 from pathlib import Path
-import json
+import ujson as json
 import numpy as np
 import cv2
 
 from aichallenger.defines import Box, Joint, Person, Crowd
+from constants.enum_keys import HK
 
 
 class AicNative(Dataset):
@@ -50,19 +51,28 @@ class AicNative(Dataset):
         keypoint_annotations = self.__labels[index]["keypoint_annotations"]
         human_annotations = self.__labels[index]["human_annotations"]
 
-        crowd: Crowd = []
-        for k, v in human_annotations.items():
-            box = Box(*v)
-            joint_list = keypoint_annotations[k]  # x1 y1 v1 x2 y2 v2
-            joint_list = np.array(joint_list).reshape(14, 3)
-            joints: List[Joint] = []
-            for joint_xyv in joint_list:
-                joint = Joint(*joint_xyv)
-                joints.append(joint)
-            person = Person(box, joints)
-            crowd.append(person)
+        num_people = len(human_annotations.keys())
+        num_joints = 14
+        keypoints = []
+        visibilities = []
+        boxes = []
+        for person_key, box_x4 in human_annotations.items():
+            boxes.append(box_x4)
+            point_xyv = keypoint_annotations[person_key]  # x1 y1 v1 x2 y2 v2
+            point_x = point_xyv[0::3]
+            point_y = point_xyv[1::3]
+            point_v = point_xyv[2::3]
+            keypoints.append(list(zip(point_x, point_y)))
+            visibilities.append(point_v)
 
-        return {'native_img': native_image, 'native_label': crowd}
+        keypoints = np.array(keypoints, dtype=np.float32).reshape((num_people, num_joints, 2))
+        visibilities = np.array(visibilities, dtype=np.int).reshape((num_people, num_joints))
+        boxes = np.array(boxes, dtype=np.float32).reshape((num_people, 4))
+
+        return {HK.NATIVE_IMAGE: native_image, HK.BOXES: boxes, HK.KEYPOINTS: keypoints,
+                HK.VISIBILITIES: visibilities, HK.NUM_PEOPLE: num_people}
+
+
 
 
 

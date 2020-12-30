@@ -7,6 +7,9 @@ from typing import Tuple, List
 import imgaug.augmenters as iaa
 from imgaug.augmentables import Keypoint, KeypointsOnImage, BoundingBox, BoundingBoxesOnImage
 
+from constants.enum_keys import HK
+
+
 class AicResize(AicNative):
     """
     Provides resized images for network input
@@ -15,38 +18,34 @@ class AicResize(AicNative):
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, **kwargs):
         super().__init__(data_path, is_train, **kwargs)
         self.resize_img_size = resize_img_size
-        # self.__fix_ratio_resize = FixRatioImgResize(resize_img_size)
         self.rkr = ResizeKeepRatio(resize_img_size)
 
     def __getitem__(self, index) -> dict:
-        res_dict = super().__getitem__(index)
+        res = super().__getitem__(index)
         # 图像Resize至网络输入大小
-        img = res_dict['native_img']
-        crowd = res_dict['native_label']
+        na_img = res[HK.NATIVE_IMAGE]
 
-        boxes = np.asarray([p.box for p in crowd], np.int)
-        joints = np.asarray([[[j.x, j.y] for j in p.joints] for p in crowd], np.int)
+        img_resize, np_kps_resize, np_boxes_resize = self.rkr.resize(na_img, res[HK.KEYPOINTS], res[HK.BOXES])
 
-        img_aug, np_kps_aug, np_boxes_aug = self.rkr.resize(img, joints, boxes)
+        res[HK.RE_IMAGE] = img_resize
+        res[HK.RE_KEYPOINTS] = np_kps_resize
+        res[HK.RE_BOXES] = np_boxes_resize
 
-        num_people: int = len(crowd)
-        num_joints: int = len(crowd[0].joints)
-        aug_labels: Crowd = []
-        for p in range(num_people):
-            np_box = np_boxes_aug[p]
-            box = Box(*np_box)
-            joints = []
-            for j in range(num_joints):
-                v = crowd[p].joints[j].v
-                x, y = np_kps_aug[p][j]
-                joint = Joint(x, y, v)
-                joints.append(joint)
-            person = Person(box, joints)
-            aug_labels.append(person)
-        res_dict['resized_img'] = img_aug
-        res_dict['resized_label'] = aug_labels
+        if 'visual_debug' in self.kwargs and self.kwargs.get('visual_debug'):
+            img_draw = KeypointsOnImage.from_xy_array(res[HK.KEYPOINTS].reshape(-1, 2), shape=na_img.shape) \
+                .draw_on_image(na_img, size=5)
+            img_draw = BoundingBoxesOnImage.from_xyxy_array(res[HK.BOXES].reshape(-1, 4), shape=na_img.shape) \
+                .draw_on_image(img_draw, size=2)
+            res[HK.DEBUG_NATIVE_IMAGE] = img_draw
 
-        return res_dict
+            img_draw = KeypointsOnImage.from_xy_array(res[HK.RE_KEYPOINTS].reshape(-1, 2), shape=img_resize.shape) \
+                .draw_on_image(img_resize, size=5)
+            img_draw = BoundingBoxesOnImage.from_xyxy_array(res[HK.RE_BOXES].reshape(-1, 4), shape=img_resize.shape) \
+                .draw_on_image(img_draw, size=2)
+            res[HK.DEBUG_RE_IMAGE] = img_draw
+
+        return res
+
 
 class ResizeKeepRatio:
     def __init__(self, target_size: tuple):
@@ -58,8 +57,6 @@ class ResizeKeepRatio:
         pts = pts.reshape((-1, 2))
         boxes_shape = boxes.shape
         boxes = boxes.reshape((-1, 4))
-        # old_kps = [Keypoint(x,y) for x,y in pts]
-        # old_boxes = [BoundingBox(x1, y1, x2, y2) for x1, y1, x2, y2 in boxes]
 
         tw, th = self.target_size
         ih, iw, ic = img.shape
@@ -73,13 +70,10 @@ class ResizeKeepRatio:
         boxes_aug = det.augment_bounding_boxes(boxes_on_img)
 
         np_kps_aug = kps_aug.to_xy_array()
-        # np_kps_aug = np.array([(p.x, p.y) for p in kps_aug])
         np_kps_aug = np_kps_aug.reshape(pts_shape)
         np_boxes_aug = boxes_aug.to_xy_array()
-        # np_boxes_aug = np.array([(p.x1, p.y1, p.x2, p.y2) for p in boxes_aug])
         np_boxes_aug = np_boxes_aug.reshape(boxes_shape)
         return img_aug, np_kps_aug, np_boxes_aug
-
 
     def __aug_sequence(self, input_size, target_size):
         iw, ih = input_size

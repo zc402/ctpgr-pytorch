@@ -5,11 +5,12 @@ import numpy as np
 from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
 
+from constants.enum_keys import HK
+from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
 class AicGaussian(AicAugment):
     """
     Provides gaussian heatmaps for keypoints, ranged 0~1
-    Construct "gau_vis" "gau_vis_or_not", shape:CHW
     """
 
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, heat_size: tuple, **kwargs):
@@ -17,82 +18,39 @@ class AicGaussian(AicAugment):
         self.heat_size = heat_size
         assert resize_img_size[0] % heat_size[0] == 0 and resize_img_size[1] % heat_size[1] == 0, \
             "Incorrect heat size: resize_img_size must be divisible by heat_size."
+        self.h_r_ratio = np.array(self.heat_size, dtype=np.float32) / np.array(self.resize_img_size, dtype=np.float32)
         self.__theta = 4
-        self.__gaussian_generator = GaussianPoint(heat_size, self.__theta)
 
     def __getitem__(self, index) -> dict:
-        res_dict = super().__getitem__(index)
-        heat_dict = self.__get_gaussian_groundtruth(res_dict["aug_label"])
-        res_dict.update(heat_dict)
-        return res_dict
+        res = super().__getitem__(index)
+        heat_keypoints = res[HK.AUG_KEYPOINTS] * self.h_r_ratio  # Shape: (P, J, X)
+        res[HK.HEAT_KEYPOINTS] = heat_keypoints
 
-    def __get_gaussian_groundtruth(self, crowd: Crowd) -> dict:
-        """
-        为AIC数据集生成 gaussian heatmap
-        :return:
-        """
+        w, h = self.heat_size
+        xy_mesh = np.meshgrid(np.arange(0, w), np.arange(0, h))  # shape: (X, H, W)
+        xy_mesh = np.asarray(xy_mesh, dtype=np.float32)
+        distance_map = heat_keypoints[..., np.newaxis][..., np.newaxis] - xy_mesh  # Shape: (PJXHW)
+        pcm_map = np.exp(-(np.square(distance_map).sum(axis=2)) / np.square(self.__theta))  # Shape: (PJHW)
+        vis = res[HK.VISIBILITIES]  # Shape: (PJ)
+        vis = np.expand_dims(vis, (2, 3))  # Shape: (PJHW)
+        # Occlusion masks
+        vis_all = np.logical_or(vis == 1, vis == 2).astype(np.float32)  # Shape: (PJHW)
+        vis_no_occ = (vis == 1).astype(np.float32)  # Shape: (PJHW)
+        pcm_vis_all = pcm_map * vis_all
+        pcm_vis_no_occ = pcm_map * vis_no_occ
+        # Marge same joints from different person
+        pcm_vis_all = np.amax(pcm_vis_all, axis=0)  # Shape: (JHW)
+        pcm_vis_no_occ = np.amax(pcm_vis_no_occ, axis=0)
+        res[HK.PCM_ALL] = pcm_vis_all
+        res[HK.PCM_NOT_OCC] = pcm_vis_no_occ
+        # Visual Debug
+        if 'visual_debug' in self.kwargs and self.kwargs.get('visual_debug'):
+            debug_pcm_all = pcm_vis_all.max(axis=0, initial=0)  # HW
+            debug_pcm_all = HeatmapsOnImage(debug_pcm_all, shape=self.heat_size, min_value=0.0, max_value=1.0)
+            res[HK.DEBUG_PCM_ALL] = debug_pcm_all.draw_on_image(res[HK.AUG_IMAGE])[0]
 
-        def zero_heat():
-            return np.zeros((self.heat_size[1], self.heat_size[0]), np.float)
+            debug_pcm_noocc = pcm_vis_no_occ.max(axis=0, initial=0)
+            debug_pcm_noocc = HeatmapsOnImage(debug_pcm_noocc, shape=self.heat_size, min_value=0.0, max_value=1.0)
+            res[HK.DEBUG_PCM_NOOCC] = debug_pcm_noocc.draw_on_image(res[HK.AUG_IMAGE])[0]
 
-        num_people: int = len(crowd)
-        num_joints: int = len(crowd[0].joints)
-        heat_dict = {"gau_vis_or_not": [],
-                     "gau_vis": []}  # shape: (J,H,W). on_image: keypoint on image, visible or not visible
-        for j in range(num_joints):
-            # Heatmaps for same joint and different person
-            heatmaps_vis_or_not = []  # Has heat when v=1,2, No heat when v=0 (not labeled)
-            heatmaps_visible = []  # Has heat when v = 1, No heat when v=0,2 (not visible, labeled/unlabeled)
-            for p in range(num_people):  # People
-                cx, cy, v_value = crowd[p].joints[j]
-                is_labeled = (v_value == 1 or v_value == 2)  # Vis or not
-                is_visible = (v_value == 1)
-                heatmap = self.__gaussian_generator.gen_heat_adjust_pt(self.resize_img_size, (cx, cy))
-
-                heat_conf = heatmap if is_labeled else zero_heat()
-                heat_vis = heatmap if is_visible else zero_heat()
-
-                heatmaps_vis_or_not.append(heat_conf)
-                heatmaps_visible.append(heat_vis)
-            # Heatmap of same joints and different people
-            heat_people_vis_not = np.amax(heatmaps_vis_or_not, axis=0)
-            heat_people_vis = np.amax(heatmaps_visible, axis=0)
-            heat_dict["gau_vis_or_not"].append(heat_people_vis_not)
-            heat_dict["gau_vis"].append(heat_people_vis)
-        heat_dict["gau_vis_or_not"] = np.asarray(heat_dict["gau_vis_or_not"], dtype=np.float)
-        heat_dict["gau_vis"] = np.asarray(heat_dict["gau_vis"], dtype=np.float)
-
-        return heat_dict
-
-# Generate a Gaussian point on black image.
-class GaussianPoint:
-
-    def __init__(self, heat_size, theta):
-        self.w = heat_size[0]  # Heat w
-        self.h = heat_size[1]
-        self.theta = theta
-
-    def gen_heat(self, pt):
-        """
-        Args:
-            pt: a coordinate (x,y)
-        """
-        cx, cy = pt[0], pt[1]
-        x_mesh, y_mesh = np.meshgrid(np.arange(0, self.w), np.arange(0, self.h))
-        heatmap = np.exp(-(np.square(x_mesh - cx) + np.square(y_mesh - cy)) / (np.square(self.theta)))
-        heatmap = heatmap.astype(np.float)
-        return heatmap
-
-    def gen_heat_adjust_pt(self, img_size, pt):
-        """
-        When image size not equal to heat size, this function adjust image keypoints to heat keypoints
-        :param img_size:
-        :return:
-        """
-        img_w, img_h = img_size
-        ratio_w = self.w / img_w
-        ratio_h = self.h / img_h
-        heat_x = pt[0] * ratio_w
-        heat_y = pt[1] * ratio_h
-        heatmap = self.gen_heat((heat_x, heat_y))
-        return heatmap
+        return res

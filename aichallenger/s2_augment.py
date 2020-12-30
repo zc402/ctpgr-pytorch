@@ -9,99 +9,83 @@ from aichallenger import AicResize
 from aichallenger.defines import Box, Joint, Person, Crowd
 from typing import Tuple, List
 
-# TODO: random seeds for threads
+from constants.enum_keys import HK
+
+
 class AicAugment(AicResize):
-    """
-    AicAugment dataset provides augmented images and labels.
-    Construct 'aug_img' and 'aug_label'
-    Add 'img_before_aug' and 'img_after_aug' if visual_debug is True
-    """
 
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, **kwargs):
         super().__init__(data_path, is_train, resize_img_size, **kwargs)
+        self.aug = ImgAugmentor()
 
     def __getitem__(self, index) -> dict:
-        res_dict = super().__getitem__(index)
+        res = super().__getitem__(index)
+        # 图像Resize至网络输入大小
+        img = res[HK.RE_IMAGE]
         if self.is_train:
-            img_aug, pts_aug, debug_dict = self.__image_augment(res_dict['resized_img'], res_dict['resized_label'])
-            res_dict.update(debug_dict)
+            img_aug, np_kps_aug, np_boxes_aug = self.aug.aug(img, res[HK.RE_KEYPOINTS], res[HK.RE_BOXES])
         else:
-            img_aug, pts_aug = res_dict['resized_img'], res_dict['resized_label']
-        res_dict['aug_img'] = img_aug
-        res_dict['aug_label'] = pts_aug
-        return res_dict
+            img_aug, np_kps_aug, np_boxes_aug = img, res[HK.RE_KEYPOINTS], res[HK.RE_BOXES]
 
-    def __image_augment(self, image: np.ndarray, crowd: Crowd):
-        """
-        Augment an image with keypoints.
-        Flatten the box and joints for imgaug, then collect them back
-        """
-        num_people: int = len(crowd)
-        num_joints: int = len(crowd[0].joints)
+        res[HK.AUG_IMAGE] = img_aug
+        res[HK.AUG_KEYPOINTS] = np_kps_aug
+        res[HK.AUG_BOXES] = np_boxes_aug
 
-        boxes = [p.box for p in crowd]
-        joints = [[[j.x, j.y] for j in p.joints] for p in crowd]
+        if 'visual_debug' in self.kwargs and self.kwargs.get('visual_debug'):
 
-        boxes_flat = np.array(boxes, np.int).reshape(-1, 4)
-        joints_flat = np.array(joints, np.int).reshape(-1, 2)
+            img_draw = KeypointsOnImage.from_xy_array(res[HK.AUG_KEYPOINTS].reshape(-1, 2), shape=img_aug.shape)\
+                .draw_on_image(img_aug, size=5)
+            img_draw = BoundingBoxesOnImage.from_xyxy_array(res[HK.AUG_BOXES].reshape(-1, 4), shape=img_aug.shape)\
+                .draw_on_image(img_draw, size=2)
+            res[HK.DEBUG_AUG_IMAGE] = img_draw
 
-        pts_before_aug = [Keypoint(*c) for c in joints_flat]
-        bbs_before_aug = [BoundingBox(*c) for c in boxes_flat]
-        # Image augmentation with keypoints
-        aug_img, aug_pts, aug_boxes, debug_dict = self.__aug_with_points(image, pts_before_aug, bbs_before_aug)
+        return res
 
-        np_aug_pts_flat = np.array([(p.x, p.y) for p in aug_pts])
-        np_aug_boxes = np.array([(p.x1, p.y1, p.x2, p.y2) for p in aug_boxes])
-        # Recover flattened points
 
-        aug_joints = np_aug_pts_flat.reshape((num_people, num_joints, 2))
+class ImgAugmentor:
 
-        aug_labels: Crowd = []
-        for p in range(num_people):
-            np_box = np_aug_boxes[p]
-            box = Box(*np_box)
-            joints = []
-            for j in range(num_joints):
-                v = crowd[p].joints[j].v
-                x, y = aug_joints[p][j]
-                joint = Joint(x, y, v)
-                joints.append(joint)
-            person = Person(box, joints)
-            aug_labels.append(person)
+    def aug(self, img, pts: np.ndarray, boxes: np.ndarray):
+        pts_shape = pts.shape
+        pts = pts.reshape((-1, 2))
+        boxes_shape = boxes.shape
+        boxes = boxes.reshape((-1, 4))
 
-        return aug_img, aug_labels, debug_dict
+        kps_on_image = KeypointsOnImage.from_xy_array(pts, shape=img.shape)
+        boxes_on_img = BoundingBoxesOnImage.from_xyxy_array(boxes, shape=img.shape)
 
-    def __aug_with_points(self, image: np.ndarray, keypoint_list: List[Keypoint], box_list: List[BoundingBox]):
-        """
-        Image and keypoints augmentation
-        Arg:
-            image (cv2 image)
-            keypoint_list (list of imgaug.augmentables.Keypoint)
-        """
-
-        kps = KeypointsOnImage(keypoint_list, shape=image.shape)
-        bbs = BoundingBoxesOnImage(box_list, shape=image.shape)
         seq = iaa.Sequential([
-            iaa.Multiply((0.8, 1.5)),  # change brightness
+            iaa.Multiply((0.8, 1.2)),  # change brightness
             iaa.Affine(
-                rotate=(-10, 10),
-                scale=(0.8, 1.2),
-                translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)},
+                rotate=(-5, 5),
+                scale=(0.95, 1.05),
+                translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
             )
         ])
         det = seq.to_deterministic()
-        image_aug = det.augment_image(image)
-        kps_aug = det.augment_keypoints(kps)
-        bbs_aug = det.augment_bounding_boxes(bbs)
-        # Show augmented points on image
-        debug_dict = {}
-        if 'visual_debug' in self.kwargs and self.kwargs.get('visual_debug'):
-            image_before = kps.draw_on_image(image, size=5)
-            image_before = bbs.draw_on_image(image_before, size=2)
-            image_after = kps_aug.draw_on_image(image_aug, size=5)
-            image_after = bbs_aug.draw_on_image(image_after, size=2)
-            debug_dict['img_before_aug'] = image_before
-            debug_dict['img_after_aug'] = image_after
-        return image_aug, kps_aug, bbs_aug, debug_dict
+        img_aug = det.augment_image(img)
+        kps_aug = det.augment_keypoints(kps_on_image)
+        boxes_aug = det.augment_bounding_boxes(boxes_on_img)
+
+        np_kps_aug = kps_aug.to_xy_array()
+        np_kps_aug = np_kps_aug.reshape(pts_shape)
+        np_boxes_aug = boxes_aug.to_xy_array()
+        np_boxes_aug = np_boxes_aug.reshape(boxes_shape)
+
+        return img_aug, np_kps_aug, np_boxes_aug
+
+    def __aug_sequence(self, input_size, target_size):
+        iw, ih = input_size
+        i_ratio = iw / ih
+        tw, th = target_size
+        t_ratio = tw / th
+        if i_ratio > t_ratio:
+            # Input image wider than target, resize width to target width
+            resize_aug = iaa.Resize({"width": tw, "height": "keep-aspect-ratio"})
+        else:
+            # Input image higher than target, resize height to target height
+            resize_aug = iaa.Resize({"width": "keep-aspect-ratio", "height": th})
+        pad_aug = iaa.PadToFixedSize(width=tw, height=th, position="center")
+        seq = iaa.Sequential([resize_aug, pad_aug])
+        return seq
 
 
