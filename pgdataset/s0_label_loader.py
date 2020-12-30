@@ -31,10 +31,8 @@ class LabelLoader(Dataset):
 
     def __getitem__(self, index):
         v_path, label = self.video_csv[index]
-        # Randomly clip the video because original video is too large to train.
-        # start_ind = np.random.randint(0, len(video_loader) - self.num_frames)
-        # truncated_video = video_loader.get(start_ind)
-        # truncated_label = label[start_ind: start_ind+self.num_frames]
+        label = [int(l) for l in label]
+        label = np.asarray(label, dtype=np.int)
         return {PG.VIDEO_PATH: v_path, PG.GESTURE_LABEL: label}
 
     @staticmethod

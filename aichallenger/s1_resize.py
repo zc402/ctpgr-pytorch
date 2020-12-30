@@ -21,16 +21,6 @@ class AicResize(AicNative):
     def __getitem__(self, index) -> dict:
         res_dict = super().__getitem__(index)
         # 图像Resize至网络输入大小
-        # resized_image, ratio = self.__fix_ratio_resize.resize(res_dict['native_img'])
-        #
-        # # 将人物关键点Resize
-        # resized_crowd: List[Person] = []
-        # for person in res_dict['native_label']:
-        #     new_person = self.__resize_person_labels(person, ratio)
-        #     resized_crowd.append(new_person)
-        #
-        # res_dict['resized_img'] = resized_image
-        # res_dict['resized_label'] = resized_crowd
         img = res_dict['native_img']
         crowd = res_dict['native_label']
 
@@ -68,21 +58,25 @@ class ResizeKeepRatio:
         pts = pts.reshape((-1, 2))
         boxes_shape = boxes.shape
         boxes = boxes.reshape((-1, 4))
-        old_kps = [Keypoint(x,y) for x,y in pts]
-        old_boxes = [BoundingBox(x1, y1, x2, y2) for x1, y1, x2, y2 in boxes]
+        # old_kps = [Keypoint(x,y) for x,y in pts]
+        # old_boxes = [BoundingBox(x1, y1, x2, y2) for x1, y1, x2, y2 in boxes]
 
         tw, th = self.target_size
         ih, iw, ic = img.shape
-        kps_on_image = KeypointsOnImage(old_kps, shape=img.shape)
-        boxes_on_img = BoundingBoxesOnImage(old_boxes, shape=img.shape)
+        kps_on_image = KeypointsOnImage.from_xy_array(pts, shape=img.shape)
+        boxes_on_img = BoundingBoxesOnImage.from_xyxy_array(boxes, shape=img.shape)
+
         seq = self.__aug_sequence((iw, ih), (tw, th))
         det = seq.to_deterministic()
         img_aug = det.augment_image(img)
         kps_aug = det.augment_keypoints(kps_on_image)
         boxes_aug = det.augment_bounding_boxes(boxes_on_img)
-        np_kps_aug = np.array([(p.x, p.y) for p in kps_aug])
+
+        np_kps_aug = kps_aug.to_xy_array()
+        # np_kps_aug = np.array([(p.x, p.y) for p in kps_aug])
         np_kps_aug = np_kps_aug.reshape(pts_shape)
-        np_boxes_aug = np.array([(p.x1, p.y1, p.x2, p.y2) for p in boxes_aug])
+        np_boxes_aug = boxes_aug.to_xy_array()
+        # np_boxes_aug = np.array([(p.x1, p.y1, p.x2, p.y2) for p in boxes_aug])
         np_boxes_aug = np_boxes_aug.reshape(boxes_shape)
         return img_aug, np_kps_aug, np_boxes_aug
 

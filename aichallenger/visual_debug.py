@@ -11,7 +11,7 @@ class VisualDebug:
         self.vis = visdom.Visdom()
         root = Path.home() / "AI_challenger_keypoint"
         train_dataset = AicNorm(root, True, (512, 512), (64, 64), visual_debug=True)
-        self.res_dict = train_dataset[1]
+        self.res_dict = train_dataset[2]
 
     def show(self):
         self.vis.close()

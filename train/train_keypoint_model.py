@@ -7,6 +7,9 @@ from pathlib import Path
 import visdom
 import cv2
 
+from constants.enum_keys import HK
+from models.gesture_recognition_model import GestureRecognitionModel
+from models.pose_estimation_model import PoseEstimationModel
 from models.pafs_network import PAFsNetwork
 from models.pafs_resnet import ResnetPAFs
 from models.pafs_network import PAFsLoss
@@ -31,12 +34,11 @@ class Trainer:
         else:
             print("GPU not available! running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model_pose = PAFsNetwork(14, len(aic_bones))
-        self.model_pose.to(self.device, dtype=torch.float)
+        self.model_pose = PoseEstimationModel()
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
-        self.model_path = Path("../checkpoints/pose_model.pt")
-        self.loss_model = PAFsLoss()
+
+        self.loss = PAFsLoss()
 
         if self.debug_mode:
             # self.batch_size = 1
@@ -69,7 +71,7 @@ class Trainer:
     def train(self):
         self.epoch = 0
         self.step = 0
-        self.load_model()
+        self.model_pose.load_ckpt()
         for self.epoch in range(self.epochs):
             print("Epoch:{}".format(self.epoch))
             self.run_epoch()
@@ -79,9 +81,9 @@ class Trainer:
 
         self.set_train()
         for batch_idx, inputs in enumerate(self.train_loader):
-            inputs[self.img_key] = inputs[self.img_key].to(self.device, dtype=torch.float)
-            inputs[self.pcm_key] = inputs[self.pcm_key].to(self.device, dtype=torch.float)
-            inputs[self.paf_key] = inputs[self.paf_key].to(self.device, dtype=torch.float)
+            inputs[self.img_key] = inputs[self.img_key].to(self.device, dtype=torch.float32)
+            inputs[self.pcm_key] = inputs[self.pcm_key].to(self.device, dtype=torch.float32)
+            inputs[self.paf_key] = inputs[self.paf_key].to(self.device, dtype=torch.float32)
             loss, b1_out, b2_out = self.process_batch(inputs)
             self.model_optimizer.zero_grad()
             loss.backward()
@@ -92,7 +94,7 @@ class Trainer:
             # Validate
             if self.step % self.val_step == 0:
                 # self.val()
-                self.save_model()
+                self.model_pose.save_ckpt()
 
             if self.step % 50 == 0:
                 print("step {}; Loss {}".format(self.step, loss.item()))
@@ -123,9 +125,9 @@ class Trainer:
             self.val_iter = iter(self.val_loader)
             inputs = next(self.val_iter)
 
-        inputs_gpu = {self.img_key: inputs[self.img_key].to(self.device, dtype=torch.float),
-                      self.pcm_key: inputs[self.pcm_key].to(self.device, dtype=torch.float),
-                      self.paf_key: inputs[self.paf_key].to(self.device, dtype=torch.float)}
+        inputs_gpu = {self.img_key: inputs[self.img_key].to(self.device, dtype=torch.float32),
+                      self.pcm_key: inputs[self.pcm_key].to(self.device, dtype=torch.float32),
+                      self.paf_key: inputs[self.paf_key].to(self.device, dtype=torch.float32)}
         with torch.no_grad():
             loss, b1_out, b2_out = self.process_batch(inputs_gpu)
         pred_pcm_amax = np.amax(b1_out[0].cpu().numpy(), axis=0)  # HW
@@ -144,29 +146,16 @@ class Trainer:
     def process_batch(self, inputs):
         """Pass a minibatch through the network and generate images and losses
         """
-        b1_stages, b2_stages, b1_out, b2_out = self.model_pose(inputs[self.img_key])
+        res = self.model_pose(inputs[self.img_key])
         gt_pcm = inputs[self.pcm_key]  # ["heatmap"]: {"vis_or_not": NJHW, "visible": NJHW}
         gt_pcm = gt_pcm.unsqueeze(1)
         gt_paf = inputs[self.paf_key]
         gt_paf = gt_paf.unsqueeze(1)
-        b1_stack = torch.stack(b1_stages, dim=1)  # Shape (N, Stage, C, H, W)
-        b2_stack = torch.stack(b2_stages, dim=1)
+        b1_stack = torch.stack(res[HK.B1_SUPERVISION], dim=1)  # Shape (N, Stage, C, H, W)
+        b2_stack = torch.stack(res[HK.B2_SUPERVISION], dim=1)
 
-        loss = self.loss_model(b1_stack, b2_stack, gt_pcm, gt_paf)
-        return loss, b1_out, b2_out
-
-    def save_model(self):
-
-        torch.save(self.model_pose.state_dict(), self.model_path)
-        print("Model saved.")
-
-    def load_model(self):
-        if Path.is_file(self.model_path):
-            checkpoint = torch.load(self.model_path)
-            self.model_pose.load_state_dict(checkpoint)
-            print("Previous ckpt loaded at ", self.model_path)
-        else:
-            print("No ckpt file found.")
+        loss = self.loss(b1_stack, b2_stack, gt_pcm, gt_paf)
+        return loss, res[HK.B1_OUT], res[HK.B2_OUT]
 
 
 def main():
