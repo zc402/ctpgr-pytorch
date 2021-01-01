@@ -5,16 +5,14 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from pathlib import Path
 import visdom
-import cv2
 
 from constants.enum_keys import HK
-from models.gesture_recognition_model import GestureRecognitionModel
 from models.pose_estimation_model import PoseEstimationModel
 from models.pafs_network import PAFsNetwork
 from models.pafs_resnet import ResnetPAFs
 from models.pafs_network import PAFsLoss
 from aichallenger import AicNorm
-from constants.keypoints import aic_bones
+from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
 class Trainer:
     def __init__(self, batch_size, debug_mode):
@@ -100,11 +98,14 @@ class Trainer:
 
             # Show training materials
             if self.step % self.val_step == 0:
-                pred_pcm_amax = np.amax(b1_out[0].cpu().detach().numpy(), axis=0)  # HW
+                pcm_CHW = b1_out[0].cpu().detach().numpy()
+                paf_CHW = b2_out[0].cpu().detach().numpy()
+                img_CHW = inputs[self.img_key][0].cpu().detach().numpy()[::-1, ...]
+                pred_pcm_amax = np.amax(pcm_CHW, axis=0)  # HW
                 gt_pcm_amax = np.amax(inputs[self.pcm_key][0].cpu().detach().numpy(), axis=0)
-                pred_paf_amax = np.amax(b2_out[0].cpu().detach().numpy(), axis=0)
+                pred_paf_amax = np.amax(paf_CHW, axis=0)
                 gt_paf_amax = np.amax(inputs[self.paf_key][0].cpu().detach().numpy(), axis=0)
-                self.vis.image(inputs[self.img_key][0].cpu().detach().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
+                self.vis.image(img_CHW, win="Input", opts={'title': "Input"})
                 self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
                 self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
                 self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})

@@ -14,10 +14,10 @@ class SkeletonCoordsDataset(LabelLoader):
         super().__init__(data_path, is_train)
         self.resize_img_size = resize_img_size
         if is_train:
-            self.coord_folder = Path("../generated/coords/train/")
+            self.coord_folder = Path("generated/coords/train/")
             self.video_folder = data_path / "train"
         else:
-            self.coord_folder = Path("../generated/coords/test/")
+            self.coord_folder = Path("generated/coords/test/")
             self.video_folder = data_path / "test"
         self.coord_folder.mkdir(parents=True, exist_ok=True)
         self.predictor = None  # Lazy initialize keypoint prediction model
@@ -83,7 +83,8 @@ class SkeletonCoordsDataset(LabelLoader):
         # Read frames
         for _ in range(v_size):
             ret, img = cap.read()
-            yield img
+            re_img = cv2.resize(img, self.resize_img_size)
+            yield re_img
 
         cap.release()
         print("Video %s prediction finished" % video_path)

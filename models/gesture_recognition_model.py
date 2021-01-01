@@ -11,7 +11,7 @@ class GestureRecognitionModel(nn.Module):
         num_output = 9
         self.batch = batch
         self.rnn = LSTM(input_size=num_input, hidden_size=num_output)
-        self.ckpt_path = Path('../checkpoints/lstm.pt')
+        self.ckpt_path = Path('checkpoints/lstm.pt')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.to(self.device, dtype=torch.float32)
         pass

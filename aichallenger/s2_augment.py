@@ -57,9 +57,11 @@ class ImgAugmentor:
             iaa.Multiply((0.8, 1.2)),  # change brightness
             iaa.Affine(
                 rotate=(-5, 5),
-                scale=(0.95, 1.05),
+                scale=(0.9, 1.05),
                 translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)},
-            )
+            ),
+            iaa.GaussianBlur(sigma=(0, 0.7)),
+            iaa.Sometimes(0.3, iaa.MotionBlur(k=(3, 7)))
         ])
         det = seq.to_deterministic()
         img_aug = det.augment_image(img)
@@ -73,19 +75,5 @@ class ImgAugmentor:
 
         return img_aug, np_kps_aug, np_boxes_aug
 
-    def __aug_sequence(self, input_size, target_size):
-        iw, ih = input_size
-        i_ratio = iw / ih
-        tw, th = target_size
-        t_ratio = tw / th
-        if i_ratio > t_ratio:
-            # Input image wider than target, resize width to target width
-            resize_aug = iaa.Resize({"width": tw, "height": "keep-aspect-ratio"})
-        else:
-            # Input image higher than target, resize height to target height
-            resize_aug = iaa.Resize({"width": "keep-aspect-ratio", "height": th})
-        pad_aug = iaa.PadToFixedSize(width=tw, height=th, position="center")
-        seq = iaa.Sequential([resize_aug, pad_aug])
-        return seq
 
 

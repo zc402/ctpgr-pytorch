@@ -15,6 +15,7 @@ class HumanKeypointPredict:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model_pose.to(self.device, dtype=torch.float)
         self.model_pose.load_ckpt(allow_new=False)
+        self.model_pose.eval()
 
     def get_heatmaps(self, u8_image: np.ndarray):
         """
@@ -42,7 +43,7 @@ class HumanKeypointPredict:
         # TODO: Separate points for multiple person and compute mass center:
         # TODO: x = 1/(w*h) * integral_0^h integral_0^w u*Val(u,v) du dv
         max_indices = [np.argmax(hw, axis=None) for hw in b1]
-        xs, ys = np.unravel_index(max_indices, b1[0].shape)  # (array([x, x, x]), array([y, y, y]))
+        ys, xs = np.unravel_index(max_indices, b1[0].shape)  # array([y, y, y])), (array([x, x, x])
         xs_norm, ys_norm = xs / chw_shape[2], ys / chw_shape[1]
         # PG.COORD_NATIVE shape: (xy(2), num_keypoints)
         results = {PG.COORD_NATIVE: (xs, ys), PG.COORD_NORM: (xs_norm, ys_norm)}

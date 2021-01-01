@@ -11,7 +11,7 @@ from models.pafs_network import PAFsNetwork
 class PoseEstimationModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.ckpt_path = Path("../checkpoints/pose_model.pt")
+        self.ckpt_path = Path("checkpoints/pose_model.pt")
         self.model_pose = PAFsNetwork(14, len(aic_bones))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.to(self.device, dtype=torch.float32)
