@@ -8,9 +8,9 @@ class GestureRecognitionModel(nn.Module):
     def __init__(self, batch):
         super().__init__()
         num_input = len(aic_bones) + 2*len(aic_bone_pairs)
-        num_output = 9
+        self.num_output = 9
         self.batch = batch
-        self.rnn = LSTM(input_size=num_input, hidden_size=num_output)
+        self.rnn = LSTM(input_size=num_input, hidden_size=self.num_output)
         self.ckpt_path = Path('checkpoints/lstm.pt')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.to(self.device, dtype=torch.float32)
@@ -23,7 +23,7 @@ class GestureRecognitionModel(nn.Module):
     def load_ckpt(self, allow_new=True):
         if Path.is_file(self.ckpt_path):
             checkpoint = torch.load(self.ckpt_path)
-            self.model_pose.load_state_dict(checkpoint)
+            self.load_state_dict(checkpoint)
         else:
             if allow_new:
                 print('LSTM ckpt not found.')

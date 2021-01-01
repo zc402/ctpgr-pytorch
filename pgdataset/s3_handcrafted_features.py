@@ -12,7 +12,7 @@ class HandCraftedFeaturesDataset(TruncateDataset):
 
     def __getitem__(self, index):
         res_dict = super().__getitem__(index)
-        # PG.COORD_NORM: numpy array of shape: (F, X, K)
+        # PG.COORD_NORM: numpy array of shape: (F, X, J)
         #   F: frames, X: xy(2), K: keypoints
         feature_dict = self.bla.handcrafted_features(res_dict[PG.COORD_NORM])
         res_dict.update(feature_dict)
@@ -33,7 +33,7 @@ class BoneLengthAngle:
         self.pairs = np.asarray(aic_bone_pairs, np.int) - 1
 
     def handcrafted_features(self, coord_norm):
-        assert len(coord_norm.shape) == 3  # (F, X, K)
+        assert len(coord_norm.shape) == 3  # (F, X, J)
         feature_dict = {}
         bone_len = self.__bone_len(coord_norm)
         bone_sin, bone_cos = self.__bone_pair_angle(coord_norm)
@@ -44,7 +44,7 @@ class BoneLengthAngle:
 
     def __bone_len(self, coord):
 
-        xy_coord = np.asarray(coord)  # coordinate values. shape: (F, X, K)
+        xy_coord = np.asarray(coord)  # coordinate values. shape: (F, X, J)
         # connect: shape (B, E). B: num_bones, E==2: endpoints
         # Bone coordinate values. shape: (F, X, B, E)
         xy_val = np.take(xy_coord, self.connections, axis=2)

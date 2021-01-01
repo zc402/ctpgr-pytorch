@@ -45,7 +45,9 @@ class Trainer:
 
                 step = step + 1
                 if step % 10 == 0:
-                    print("Step: %d, Loss: %d" % (step, loss_tensor.item()))
+                    print("Step: %d, Loss: %f" % (step, loss_tensor.item()))
+                if step % 1000 == 0:
+                    self.model.save_ckpt()
 
 
 if __name__ == '__main__':
