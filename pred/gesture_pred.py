@@ -28,8 +28,9 @@ class GesturePred:
         features = torch.from_numpy(features)
         features = features.to(self.g_model.device, dtype=torch.float32)
         with torch.no_grad():
-            output, h, c = self.g_model(features, self.h, self.c)  # Output shape: (1, 1, num_classes)
-        np_out = output[0, 0].cpu().numpy()
+            _, h, c, class_out = self.g_model(features, self.h, self.c)  # Output shape: (1, 1, num_classes)
+        self.h, self.c = h, c
+        np_out = class_out[0].cpu().numpy()
         max_arg = np.argmax(np_out)
         res_dict = {PG.OUT_ARGMAX: max_arg, PG.OUT_SCORES: np_out}
         return res_dict

@@ -63,7 +63,7 @@ class BoneLengthAngle:
         xy_coord = np.asarray(coord)  # shape: (F,X,K)
         xy_val = np.take(xy_coord, self.pairs, axis=2)  # shape: (F, X, P, B, E)
         xy_vec = xy_val[:, :, :, :, 1] - xy_val[:, :, :, :, 0]  # shape: (F,X,P,B)
-        ax = xy_vec[:, 0, :, 0]
+        ax = xy_vec[:, 0, :, 0]  # Shape: (F, P)
         bx = xy_vec[:, 0, :, 1]
         ay = xy_vec[:, 1, :, 0]
         by = xy_vec[:, 1, :, 1]

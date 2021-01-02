@@ -25,14 +25,37 @@ class Player:
         cap = cv2.VideoCapture(str(res[PG.VIDEO_PATH]))
         v_size = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         v_fps = int(cap.get(cv2.CAP_PROP_FPS))
-        duration = int(1000/v_fps)
+        duration = int(1000/60)
         for n in range(v_size):
             ret, img = cap.read()
             re_img = cv2.resize(img, self.img_size)
             gdict = self.gpred.from_skeleton(coord_norm_FXJ[n][np.newaxis])
             gesture = gdict[PG.OUT_ARGMAX]
+            ges_name = self.gesture_dict[gesture]
             re_img = draw_text(re_img, 50, 100, str(gesture))
             pOnImg = kps[n]
             img_kps = pOnImg.draw_on_image(re_img)
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
+
+    gesture_dict = {
+        0: "NO GESTURE",
+        1: "STOP",
+        2: "MOVE STRAIGHT",
+        3: "LEFT TURN",
+        4: "LEFT TURN WAITING",
+        5: "RIGHT TURN",
+        6: "LANG CHANGING",
+        7: "SLOW DOWN",
+        8: "PULL OVER"}
+
+    gesture_dict_c = {
+        0: "无手势",
+        1: "停止",
+        2: "直行",
+        3: "左转",
+        4: "左待转",
+        5: "右转",
+        6: "变道",
+        7: "减速",
+        8: "靠边停车"}

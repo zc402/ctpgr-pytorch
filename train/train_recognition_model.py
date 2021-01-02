@@ -30,15 +30,14 @@ class Trainer:
                 features = features.permute(1, 0, 2)  # NFC->FNC
                 features = features.to(self.model.device, dtype=torch.float32)
                 h0, c0 = self.model.h0(), self.model.c0()
-                # output of shape (seq_len, batch, num_directions * hidden_size)
-                output, h, c = self.model(features, h0, c0)
+                # class_out: (batch, num_class)
+                _, h, c, class_out = self.model(features, h0, c0)
                 target = ges_data[PG.GESTURE_LABEL]
                 target = target.to(self.model.device, dtype=torch.long)
                 target = target.permute(1, 0)
                 # Cross Entropy, Input: (N, C), Target: (N).
-                output = output.reshape((-1, output.shape[2]))  # new shape: (seq_len*batch, classes)
                 target = target.reshape((-1))  # new shape: (seq_len*batch)
-                loss_tensor = self.loss(output, target)
+                loss_tensor = self.loss(class_out, target)
                 self.opt.zero_grad()
                 loss_tensor.backward()
                 self.opt.step()

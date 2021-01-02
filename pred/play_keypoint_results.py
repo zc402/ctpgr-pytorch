@@ -31,3 +31,4 @@ class Player:
             img_kps = pOnImg.draw_on_image(re_img)
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
+

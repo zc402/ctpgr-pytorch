@@ -18,6 +18,6 @@ def train_recognition_model():
     train.train_recognition_model.Trainer().train()
 
 def play_gesture_res():
-    pred.play_gesture_results.Player().play(is_train=True, video_index=0)
+    pred.play_gesture_results.Player().play(is_train=True, video_index=3)
 
 play_gesture_res()
