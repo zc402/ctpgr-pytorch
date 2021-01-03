@@ -13,13 +13,21 @@ This is a pytorch deep learning project that recognizes 8 kinds of Traffic polic
 
 ## Quick Start
 
-### Download checkpoints from [GoogleDrive](https://drive.google.com/drive/folders/1kngUBiiUWUOt1NeasHS9IMGQvJrFoxpO?usp=sharing), put them into:
+### Download checkpoints from , put them into:
 
-从上述GoogleDrive下载模型参数，放置在：
+下载模型参数，放置在：
 ```
 (project folder)/checkpoints
 (project folder)/generated  # optional
 ```
+
+### Checkpoint download:
+
+模型参数下载地址：
+
+[GoogleDrive](https://drive.google.com/drive/folders/1kngUBiiUWUOt1NeasHS9IMGQvJrFoxpO?usp=sharing)
+
+[Nutstore 坚果云](https://www.jianguoyun.com/p/DQz4eNMQ9_LMBhi-9dYD)
 
 ### Download PoliceGesture dataset (required) and AI Challenger dataset (optional), put them into
 
