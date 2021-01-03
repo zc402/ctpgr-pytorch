@@ -4,18 +4,25 @@
 
 This is a pytorch deep learning project that recognizes 8 kinds of Traffic police commanding gestures.
 
+<p align="center">
+    <img src="docs/intro.gif" width="480">
+</p>
+
+## Paper
+电子学报： http://www.ejournal.org.cn/CN/10.3969/j.issn.0372-2112.2020.05.018 
+
 ## Quick Start
-#### Download checkpoints from GoogleDrive[], put them into: 
+#### Download checkpoints from GoogleDrive[], put them into:
 
 从GoogleDrive下载模型参数，放置在：
 ```
-(project folder)/checkpoints/pose_model.pt
-(project folder)/checkpoints/lstm.pt
+(project folder)/checkpoints
+(project folder)/generated  # optional
 ```
 
-#### Download PoliceGesture dataset and AI Challenger dataset (optional), put them into
+#### Download PoliceGesture dataset (required) and AI Challenger dataset (optional), put them into
 
-下载交警手势数据集和AI Challenger数据集（可选），放置在：
+下载交警手势数据集（必选）和AI Challenger数据集（可选），放置在：
 ```
 (home folder)/PoliceGestureLong
 (home folder)/AI_challenger_keypoint
