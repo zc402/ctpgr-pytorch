@@ -12,9 +12,9 @@ This is a pytorch deep learning project that recognizes 8 kinds of Traffic polic
 电子学报： http://www.ejournal.org.cn/CN/10.3969/j.issn.0372-2112.2020.05.018 
 
 ## Quick Start
-#### Download checkpoints from GoogleDrive[], put them into:
+#### Download checkpoints from [GoogleDrive](https://drive.google.com/drive/folders/1kngUBiiUWUOt1NeasHS9IMGQvJrFoxpO?usp=sharing), put them into:
 
-从GoogleDrive下载模型参数，放置在：
+从上述GoogleDrive下载模型参数，放置在：
 ```
 (project folder)/checkpoints
 (project folder)/generated  # optional
