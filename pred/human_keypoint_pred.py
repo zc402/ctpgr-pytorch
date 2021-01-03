@@ -46,5 +46,5 @@ class HumanKeypointPredict:
         ys, xs = np.unravel_index(max_indices, b1[0].shape)  # array([y, y, y])), (array([x, x, x])
         xs_norm, ys_norm = xs / chw_shape[2], ys / chw_shape[1]
         # PG.COORD_NATIVE shape: (xy(2), num_keypoints)
-        results = {PG.COORD_NATIVE: (xs, ys), PG.COORD_NORM: (xs_norm, ys_norm)}
+        results = {PG.COORD_NATIVE: np.array((xs, ys)), PG.COORD_NORM: np.array((xs_norm, ys_norm))}
         return results

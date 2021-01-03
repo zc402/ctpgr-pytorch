@@ -8,16 +8,12 @@ from constants.enum_keys import PG
 class LabelLoader(Dataset):
 
     def __init__(self, data_path, is_train):
-        paths = dict()
-        paths["train", "root"] = data_path / "train"
-        paths["pred", "root"] = data_path / "pred"
-
         self.is_train = is_train
 
         if is_train:
-            root: Path = paths["train", "root"]
+            root: Path = data_path / "train"
         else:
-            root: Path = paths["pred", "root"]
+            root: Path = data_path / "test"
 
         video_paths: List = list(root.glob('./*.mp4'))
 

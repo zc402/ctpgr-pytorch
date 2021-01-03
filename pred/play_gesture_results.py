@@ -14,7 +14,7 @@ class Player:
         self.img_size = (512, 512)
         self.gpred = pred.gesture_pred.GesturePred()
 
-    def play(self, is_train, video_index):
+    def play_dataset_video(self, is_train, video_index):
         self.scd = SkeletonCoordsDataset(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
         res = self.scd[video_index]
         coord_norm_FXJ = res[PG.COORD_NORM]  # Shape: F,X,J
@@ -25,18 +25,41 @@ class Player:
         cap = cv2.VideoCapture(str(res[PG.VIDEO_PATH]))
         v_size = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         v_fps = int(cap.get(cv2.CAP_PROP_FPS))
-        duration = int(1000/60)
+        duration = int(1000/(v_fps*4))
         for n in range(v_size):
             ret, img = cap.read()
             re_img = cv2.resize(img, self.img_size)
             gdict = self.gpred.from_skeleton(coord_norm_FXJ[n][np.newaxis])
             gesture = gdict[PG.OUT_ARGMAX]
             ges_name = self.gesture_dict[gesture]
-            re_img = draw_text(re_img, 50, 100, str(gesture))
+            re_img = draw_text(re_img, 50, 100, ges_name, (255, 50, 50), size=40)
             pOnImg = kps[n]
             img_kps = pOnImg.draw_on_image(re_img)
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
+
+    def play_custom_video(self, video_path):
+        cap = cv2.VideoCapture(str(video_path))
+        v_size = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        v_fps = int(cap.get(cv2.CAP_PROP_FPS))
+        duration = 10
+        for n in range(v_size):
+            ret, img = cap.read()
+            re_img = cv2.resize(img, self.img_size)
+            gdict = self.gpred.from_img(re_img)
+            gesture = gdict[PG.OUT_ARGMAX]
+            # Keypoints on image
+            coord_norm_FXJ = gdict[PG.COORD_NORM]
+            coord_norm_FJX = np.transpose(coord_norm_FXJ, (0, 2, 1))  # FJX
+            coord_FJX = coord_norm_FJX * np.array(self.img_size)
+            koi = KeypointsOnImage.from_xy_array(coord_FJX[0], shape=re_img.shape)
+            re_img = koi.draw_on_image(re_img)
+            # Gesture name on image
+            ges_name = self.gesture_dict[gesture]
+            re_img = draw_text(re_img, 50, 100, ges_name, (255, 50, 50), size=40)
+            cv2.imshow("Play saved keypoint results", re_img)
+            cv2.waitKey(duration)
+
 
     gesture_dict = {
         0: "NO GESTURE",

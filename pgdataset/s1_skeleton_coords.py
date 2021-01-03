@@ -1,6 +1,7 @@
 # Predict each frame to coordinates and save to disk for further usages
 from pred.human_keypoint_pred import HumanKeypointPredict
 import pickle
+import shutil
 from pathlib import Path
 import cv2
 import numpy as np
@@ -89,5 +90,9 @@ class SkeletonCoordsDataset(LabelLoader):
         cap.release()
         print("Video %s prediction finished" % video_path)
 
+    @staticmethod
+    def remove_generated_skeletons():
+        p = Path("generated/coords/")
+        shutil.rmtree(p)
 
 

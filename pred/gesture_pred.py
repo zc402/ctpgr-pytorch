@@ -20,6 +20,7 @@ class GesturePred:
 
     def from_skeleton(self, coord_norm):
         # coord_norm: FXJ, F==1
+        assert coord_norm.ndim == 3 and coord_norm.shape[0] == 1
         ges_data = self.bla.handcrafted_features(coord_norm)  # Shape: (F, C) F==1
         features = np.concatenate((ges_data[PG.BONE_LENGTH], ges_data[PG.BONE_ANGLE_COS],
                               ges_data[PG.BONE_ANGLE_SIN]), axis=1)
@@ -32,7 +33,7 @@ class GesturePred:
         self.h, self.c = h, c
         np_out = class_out[0].cpu().numpy()
         max_arg = np.argmax(np_out)
-        res_dict = {PG.OUT_ARGMAX: max_arg, PG.OUT_SCORES: np_out}
+        res_dict = {PG.OUT_ARGMAX: max_arg, PG.OUT_SCORES: np_out, PG.COORD_NORM: coord_norm}
         return res_dict
 
     def from_img(self, img: np.ndarray):
@@ -40,5 +41,5 @@ class GesturePred:
         assert isinstance(img, np.ndarray)
         assert img.dtype == np.uint8 and img.ndim == 3, "Expect ndarray of shape (H, W, C)"
         p_res = self.p_predictor.get_coordinates(img)
-        res_dict = self.from_skeleton(p_res[PG.COORD_NORM])
-        yield res_dict
+        res_dict = self.from_skeleton(p_res[PG.COORD_NORM][np.newaxis])
+        return res_dict

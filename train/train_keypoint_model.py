@@ -18,7 +18,7 @@ class Trainer:
     def __init__(self, batch_size, debug_mode):
         # self.debug_mode: Set num_worker to 0. Otherwise pycharm debug won't work due to multithreading.
         self.debug_mode = debug_mode
-        self.epochs = 100
+        self.epochs = 5
         self.val_step = 500
         self.batch_size = batch_size
         self.vis = visdom.Visdom()
