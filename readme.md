@@ -55,17 +55,14 @@ conda install ujson
 pip install visdom opencv-python imgaug
 ```
 
-### Run ctpgr.py
-#### Recognize video 0 in test folder
+### Usage
+```bash
+# Recognize a custom video
+# 识别自定义视频文件 
+python ctpgr.py -p C:\012.mp4
 
-识别交警数据集中test文件夹第0个视频
-```
+# Recognize video 0 in dataset test folder
+# 识别交警数据集中test文件夹第0个视频
 python ctpgr.py -b 0
 ```
 
-#### Recognize a custom video
-
-识别自定义视频文件
-```
-python ctpgr.py -p C:\Users\zc\PoliceGestureLong\test\012.mp4
-```
