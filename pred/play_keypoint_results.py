@@ -9,7 +9,8 @@ from pgdataset.s1_skeleton import PgdSkeleton
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, is_unittest=False):
+        self.is_unittest = is_unittest
         self.img_size = (512, 512)
 
     def play(self, is_train, video_index):
@@ -29,6 +30,8 @@ class Player:
             re_img = cv2.resize(img, self.img_size)
             pOnImg = kps[n]
             img_kps = pOnImg.draw_on_image(re_img)
+            if self.is_unittest:
+                break
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
 

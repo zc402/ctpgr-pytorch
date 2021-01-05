@@ -11,9 +11,10 @@ from aichallenger.s1_resize import ResizeKeepRatio
 import pred.gesture_pred
 
 class Player:
-    def __init__(self):
+    def __init__(self, is_unittest=False):
         self.img_size = (512, 512)
         self.gpred = pred.gesture_pred.GesturePred()
+        self.is_unittest = is_unittest
 
     def play_dataset_video(self, is_train, video_index, show=True):
         self.scd = PgdSkeleton(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
@@ -40,6 +41,8 @@ class Player:
             re_img = draw_text(re_img, 50, 100, ges_name, (255, 50, 50), size=40)
             pOnImg = kps[n]
             img_kps = pOnImg.draw_on_image(re_img)
+            if self.is_unittest:
+                break
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
         gestures = np.array(gestures, np.int)
@@ -71,6 +74,8 @@ class Player:
             # Gesture name on image
             ges_name = self.gesture_dict[gesture]
             re_img = draw_text(re_img, 50, 100, ges_name, (255, 50, 50), size=40)
+            if self.is_unittest:
+                break
             cv2.imshow("Play saved keypoint results", re_img)
             cv2.waitKey(duration)
 
