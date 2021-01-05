@@ -5,7 +5,8 @@ from pathlib import Path
 import numpy as np
 from constants.enum_keys import PG
 
-class LabelLoader(Dataset):
+
+class PgdLabel(Dataset):
 
     def __init__(self, data_path, is_train):
         self.is_train = is_train
@@ -19,7 +20,6 @@ class LabelLoader(Dataset):
             raise FileNotFoundError(str(root), ' not found.')
 
         video_paths: List = list(root.glob('./*.mp4'))
-
 
         csv_paths: List = [p.with_suffix('.csv') for p in video_paths]
         csv_contents: List = [self.__load_csv_label(p) for p in csv_paths]

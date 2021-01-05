@@ -3,9 +3,9 @@ from constants.enum_keys import PG
 from numpy import random
 import numpy as np
 
-from pgdataset.s1_skeleton_coords import SkeletonCoordsDataset
+from pgdataset.s1_skeleton import PgdSkeleton
 
-class TruncateDataset(SkeletonCoordsDataset):
+class PgdTruncate(PgdSkeleton):
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, clip_len: int):
         super().__init__(data_path, is_train, resize_img_size)
         self.clip_len = clip_len

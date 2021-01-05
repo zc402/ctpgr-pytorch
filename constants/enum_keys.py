@@ -39,7 +39,6 @@ class HK(Enum):  # Human Keypoint
     B2_SUPERVISION = auto()  # The intermediate supervision at each stage
 
 
-
 class PG(Enum):  # Police Gesture
     VIDEO_PATH = auto()  # path of police gesture video
     VIDEO_NAME = 'VIDEO_NAME'

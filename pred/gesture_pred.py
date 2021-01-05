@@ -5,7 +5,7 @@ from models.pose_estimation_model import PoseEstimationModel
 import torch
 import numpy as np
 
-from pgdataset.s3_handcrafted_features import BoneLengthAngle
+from pgdataset.s3_handcraft import BoneLengthAngle
 from pred.human_keypoint_pred import HumanKeypointPredict
 
 

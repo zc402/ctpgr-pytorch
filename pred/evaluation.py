@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import numpy as np
-from pgdataset.s0_label_loader import LabelLoader
+from pgdataset.s0_label import PgdLabel
 from torch.utils.data import DataLoader
 from pred.play_gesture_results import Player
 
@@ -9,7 +9,7 @@ from pred.play_gesture_results import Player
 class Eval:
     def __init__(self):
         self.player = Player()
-        self.num_video = len(LabelLoader(Path.home() / 'PoliceGestureLong', is_train=False))
+        self.num_video = len(PgdLabel(Path.home() / 'PoliceGestureLong', is_train=False))
         self.ed = EditDistance()
 
     def main(self):

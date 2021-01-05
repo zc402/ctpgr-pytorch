@@ -6,7 +6,7 @@ from imgaug import KeypointsOnImage
 from imgaug.imgaug import draw_text
 from warnings import warn
 from constants.enum_keys import PG
-from pgdataset.s1_skeleton_coords import SkeletonCoordsDataset
+from pgdataset.s1_skeleton import PgdSkeleton
 from aichallenger.s1_resize import ResizeKeepRatio
 import pred.gesture_pred
 
@@ -16,7 +16,7 @@ class Player:
         self.gpred = pred.gesture_pred.GesturePred()
 
     def play_dataset_video(self, is_train, video_index, show=True):
-        self.scd = SkeletonCoordsDataset(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
+        self.scd = PgdSkeleton(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
         res = self.scd[video_index]
         coord_norm_FXJ = res[PG.COORD_NORM]  # Shape: F,X,J
         coord_norm_FJX = np.transpose(coord_norm_FXJ, (0, 2, 1))  # FJX

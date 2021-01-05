@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 import basic_tests.basic_tests
-import pgdataset.s1_skeleton_coords
+import pgdataset.s1_skeleton
 import train.train_police_gesture_model
 import train.train_keypoint_model
 import pred.play_keypoint_results
@@ -11,7 +11,6 @@ import pred.evaluation
 
 def prepare_skeleton():
     pred.prepare_skeleton_from_video.save()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -36,11 +35,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.train_keypoint:
-        train.train_keypoint_model.Trainer(batch_size=10, debug_mode=False).train()
+        train.train_keypoint_model.Trainer(batch_size=10).train()
     elif args.train_gesture:
         train.train_police_gesture_model.Trainer().train()
     elif args.clean_saved_skeleton:
-        pgdataset.s1_skeleton_coords.SkeletonCoordsDataset.remove_generated_skeletons()
+        pgdataset.s1_skeleton.PgdSkeleton.remove_generated_skeletons()
     elif args.play_keypoint is not None:
         prepare_skeleton()
         pred.play_keypoint_results.Player().play(is_train=False, video_index=args.play_keypoint)

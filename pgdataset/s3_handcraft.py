@@ -1,11 +1,13 @@
 import numpy as np
 import math
 from pathlib import Path
-from pgdataset.s2_truncate import TruncateDataset
+from pgdataset.s2_truncate import PgdTruncate
 from constants.enum_keys import PG
 from constants.keypoints import aic_bones, aic_bone_pairs
 
-class HandCraftedFeaturesDataset(TruncateDataset):
+
+class PgdHandcraft(PgdTruncate):
+    """Return handcrafted features: bone length and angle"""
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, clip_len: int):
         super().__init__(data_path, is_train, resize_img_size, clip_len)
         self.bla = BoneLengthAngle()

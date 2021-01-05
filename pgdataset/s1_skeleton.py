@@ -5,11 +5,11 @@ import shutil
 from pathlib import Path
 import cv2
 import numpy as np
-from pgdataset.s0_label_loader import LabelLoader
+from pgdataset.s0_label import PgdLabel
 from constants.enum_keys import PG
 
 
-class SkeletonCoordsDataset(LabelLoader):
+class PgdSkeleton(PgdLabel):
     """Load coords from disk if exists, else predict coords."""
     def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple):
         super().__init__(data_path, is_train)

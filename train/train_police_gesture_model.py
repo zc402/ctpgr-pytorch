@@ -3,18 +3,20 @@ from torch.utils.data import DataLoader
 import torch
 import numpy as np
 from torch.nn import CrossEntropyLoss
-from pgdataset.s3_handcrafted_features import HandCraftedFeaturesDataset
+from pgdataset.s3_handcraft import PgdHandcraft
 from constants.enum_keys import PG
 from models.gesture_recognition_model import GestureRecognitionModel
 from torch import optim
+from constants import settings
 
 
 class Trainer:
-    def __init__(self):
+    def __init__(self, is_unittest=False):
+        self.is_unittest = is_unittest
         self.batch_size = 2  # Not bigger than num of training videos
         self.clip_len = 15*30
-        pgd = HandCraftedFeaturesDataset(Path.home() / 'PoliceGestureLong', True, (512, 512), clip_len=self.clip_len)
-        self.data_loader = DataLoader(pgd, batch_size=self.batch_size, shuffle=False)#, collate_fn=lambda x: x)
+        pgd = PgdHandcraft(Path.home() / 'PoliceGestureLong', True, (512, 512), clip_len=self.clip_len)
+        self.data_loader = DataLoader(pgd, batch_size=self.batch_size, shuffle=False, num_workers=settings.num_workers)
         self.model = GestureRecognitionModel(batch=self.batch_size)
         self.model.train()
         self.loss = CrossEntropyLoss()  # The input is expected to contain raw, unnormalized scores for each class.
@@ -43,12 +45,12 @@ class Trainer:
                 loss_tensor.backward()
                 self.opt.step()
 
-                step = step + 1
                 if step % 100 == 0:
                     print("Step: %d, Loss: %f" % (step, loss_tensor.item()))
-                if step % 5000 == 0:
+                if step % 5000 == 0 and step != 0:
                     self.model.save_ckpt()
-
-
-if __name__ == '__main__':
-    Trainer().train()
+                if self.is_unittest:
+                    break
+                step = step + 1
+            if self.is_unittest:
+                break

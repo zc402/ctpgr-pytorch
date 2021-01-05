@@ -5,19 +5,16 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from pathlib import Path
 import visdom
-
+from constants import settings
 from constants.enum_keys import HK
 from models.pose_estimation_model import PoseEstimationModel
-from models.pafs_network import PAFsNetwork
-from models.pafs_resnet import ResnetPAFs
 from models.pafs_network import PAFsLoss
 from aichallenger import AicNorm
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
 class Trainer:
-    def __init__(self, batch_size, debug_mode, is_unittest=False):
+    def __init__(self, batch_size, is_unittest=False):
         # self.debug_mode: Set num_worker to 0. Otherwise pycharm debug won't work due to multithreading.
-        self.debug_mode = debug_mode
         self.is_unittest = is_unittest
         self.epochs = 5
         self.val_step = 500
@@ -38,14 +35,9 @@ class Trainer:
 
         self.loss = PAFsLoss()
 
-        if self.debug_mode:
-            workers = 0
-        else:
-            workers = 4
-
         train_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=True,
                                 resize_img_size=(512, 512), heat_size=(64, 64))
-        self.train_loader = DataLoader(train_dataset, self.batch_size, shuffle=True, num_workers=workers,
+        self.train_loader = DataLoader(train_dataset, self.batch_size, shuffle=True, num_workers=settings.num_workers,
                                        pin_memory=True, drop_last=True)
 
         # test_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=False,
@@ -72,6 +64,9 @@ class Trainer:
             print("Epoch:{}".format(self.epoch))
             self.run_epoch()
 
+            if self.is_unittest:
+                break
+
 
     def run_epoch(self):
 
@@ -88,7 +83,7 @@ class Trainer:
             if self.step == 0:
                 self.vis.close()
             # Validate
-            if self.step % self.val_step == 0:
+            if self.step % self.val_step == 0 and self.step != 0:
                 # self.val()
                 self.model_pose.save_ckpt()
 
@@ -110,10 +105,10 @@ class Trainer:
                 self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
                 self.vis.heatmap(np.flipud(gt_paf_amax), win="GT-PAF", opts={'title': "GT-PAF"})
                 self.vis.line(X=np.array([self.step]), Y=loss.cpu().detach().numpy()[np.newaxis], win='Loss', update='append')
-
+            if self.is_unittest:
+                break
             self.step += 1
-            # if self.is_unittest:
-            #     exit(0)
+
 
     # def val(self, ):
     #     """Validate the model on a single minibatch
