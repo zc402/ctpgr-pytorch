@@ -11,7 +11,7 @@ from torch import optim
 
 class Trainer:
     def __init__(self):
-        self.batch_size = 10
+        self.batch_size = 2  # Not bigger than num of training videos
         self.clip_len = 15*30
         pgd = HandCraftedFeaturesDataset(Path.home() / 'PoliceGestureLong', True, (512, 512), clip_len=self.clip_len)
         self.data_loader = DataLoader(pgd, batch_size=self.batch_size, shuffle=False)#, collate_fn=lambda x: x)

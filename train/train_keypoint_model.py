@@ -15,9 +15,10 @@ from aichallenger import AicNorm
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
 class Trainer:
-    def __init__(self, batch_size, debug_mode):
+    def __init__(self, batch_size, debug_mode, is_unittest=False):
         # self.debug_mode: Set num_worker to 0. Otherwise pycharm debug won't work due to multithreading.
         self.debug_mode = debug_mode
+        self.is_unittest = is_unittest
         self.epochs = 5
         self.val_step = 500
         self.batch_size = batch_size
@@ -38,10 +39,8 @@ class Trainer:
         self.loss = PAFsLoss()
 
         if self.debug_mode:
-            # self.batch_size = 1
             workers = 0
         else:
-            # self.batch_size = batch_size
             workers = 4
 
         train_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=True,
@@ -49,11 +48,11 @@ class Trainer:
         self.train_loader = DataLoader(train_dataset, self.batch_size, shuffle=True, num_workers=workers,
                                        pin_memory=True, drop_last=True)
 
-        test_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=False,
-                               resize_img_size=(512, 512), heat_size=(64, 64))
-        self.val_loader = DataLoader(test_dataset, self.batch_size, shuffle=False, num_workers=workers, pin_memory=True,
-                                     drop_last=True)
-        self.val_iter = iter(self.val_loader)
+        # test_dataset = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=False,
+        #                        resize_img_size=(512, 512), heat_size=(64, 64))
+        # self.val_loader = DataLoader(test_dataset, self.batch_size, shuffle=False, num_workers=workers, pin_memory=True,
+        #                              drop_last=True)
+        # self.val_iter = iter(self.val_loader)
 
     def set_train(self):
         """Convert models to training mode
@@ -113,35 +112,37 @@ class Trainer:
                 self.vis.line(X=np.array([self.step]), Y=loss.cpu().detach().numpy()[np.newaxis], win='Loss', update='append')
 
             self.step += 1
+            # if self.is_unittest:
+            #     exit(0)
 
-    def val(self, ):
-        """Validate the model on a single minibatch
-        """
-        self.set_eval()
-
-        try:
-            inputs = next(self.val_iter)
-        except StopIteration:
-            self.val_iter = iter(self.val_loader)
-            inputs = next(self.val_iter)
-
-        inputs_gpu = {self.img_key: inputs[self.img_key].to(self.device, dtype=torch.float32),
-                      self.pcm_key: inputs[self.pcm_key].to(self.device, dtype=torch.float32),
-                      self.paf_key: inputs[self.paf_key].to(self.device, dtype=torch.float32)}
-        with torch.no_grad():
-            loss, b1_out, b2_out = self.process_batch(inputs_gpu)
-        pred_pcm_amax = np.amax(b1_out[0].cpu().numpy(), axis=0)  # HW
-        gt_pcm_amax = np.amax(inputs[self.pcm_key][0].cpu().numpy(), axis=0)
-        pred_paf_amax = np.amax(b2_out[0].cpu().numpy(), axis=0)
-        gt_paf_amax = np.amax(inputs[self.paf_key][0].cpu().numpy(), axis=0)
-        # Image augmentation disabled due to pred phase
-        self.vis.image(inputs[self.img_key][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
-        self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
-        self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
-        self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
-        self.vis.heatmap(np.flipud(gt_paf_amax), win="GT-PAF", opts={'title': "GT-PAF"})
-        self.vis.line(X=np.array([self.step]), Y=loss.cpu().numpy()[np.newaxis], win='Loss', update='append')
-        self.set_train()
+    # def val(self, ):
+    #     """Validate the model on a single minibatch
+    #     """
+    #     self.set_eval()
+    #
+    #     try:
+    #         inputs = next(self.val_iter)
+    #     except StopIteration:
+    #         self.val_iter = iter(self.val_loader)
+    #         inputs = next(self.val_iter)
+    #
+    #     inputs_gpu = {self.img_key: inputs[self.img_key].to(self.device, dtype=torch.float32),
+    #                   self.pcm_key: inputs[self.pcm_key].to(self.device, dtype=torch.float32),
+    #                   self.paf_key: inputs[self.paf_key].to(self.device, dtype=torch.float32)}
+    #     with torch.no_grad():
+    #         loss, b1_out, b2_out = self.process_batch(inputs_gpu)
+    #     pred_pcm_amax = np.amax(b1_out[0].cpu().numpy(), axis=0)  # HW
+    #     gt_pcm_amax = np.amax(inputs[self.pcm_key][0].cpu().numpy(), axis=0)
+    #     pred_paf_amax = np.amax(b2_out[0].cpu().numpy(), axis=0)
+    #     gt_paf_amax = np.amax(inputs[self.paf_key][0].cpu().numpy(), axis=0)
+    #     # Image augmentation disabled due to pred phase
+    #     self.vis.image(inputs[self.img_key][0].cpu().numpy()[::-1, ...], win="Input", opts={'title': "Input"})
+    #     self.vis.heatmap(np.flipud(pred_pcm_amax), win="Pred-PCM", opts={'title': "Pred-PCM"})
+    #     self.vis.heatmap(np.flipud(gt_pcm_amax), win="GT-PCM", opts={'title': "GT-PCM"})
+    #     self.vis.heatmap(np.flipud(pred_paf_amax), win="Pred-PAF", opts={'title': "Pred-PAF"})
+    #     self.vis.heatmap(np.flipud(gt_paf_amax), win="GT-PAF", opts={'title': "GT-PAF"})
+    #     self.vis.line(X=np.array([self.step]), Y=loss.cpu().numpy()[np.newaxis], win='Loss', update='append')
+    #     self.set_train()
 
     def process_batch(self, inputs):
         """Pass a minibatch through the network and generate images and losses
@@ -157,10 +158,3 @@ class Trainer:
         loss = self.loss(b1_stack, b2_stack, gt_pcm, gt_paf)
         return loss, res[HK.B1_OUT], res[HK.B2_OUT]
 
-
-def main():
-    Trainer(batch_size=2, debug_mode=False).train()
-
-
-if __name__ == "__main__":
-    main()

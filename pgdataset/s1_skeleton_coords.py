@@ -25,7 +25,7 @@ class SkeletonCoordsDataset(LabelLoader):
 
     def __getitem__(self, index):
         res_dict = super().__getitem__(index)
-        v_name = res_dict[PG.VIDEO_PATH].name
+        v_name = res_dict[PG.VIDEO_NAME]
         coord_dict = self.__vpath_to_coords(v_name)
         # keys: 'coord_native', 'coord_norm'
         res_dict.update(coord_dict)
@@ -72,7 +72,7 @@ class SkeletonCoordsDataset(LabelLoader):
 
     def __video_reader(self, video_path):
 
-        cap = cv2.VideoCapture(str(video_path))
+        cap = cv2.VideoCapture(video_path)
         # Checking
         if not cap.isOpened():
             raise FileNotFoundError("%s can't be opened" % video_path)

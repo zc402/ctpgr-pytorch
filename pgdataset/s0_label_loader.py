@@ -15,7 +15,11 @@ class LabelLoader(Dataset):
         else:
             root: Path = data_path / "test"
 
+        if not root.exists():
+            raise FileNotFoundError(str(root), ' not found.')
+
         video_paths: List = list(root.glob('./*.mp4'))
+
 
         csv_paths: List = [p.with_suffix('.csv') for p in video_paths]
         csv_contents: List = [self.__load_csv_label(p) for p in csv_paths]
@@ -27,9 +31,11 @@ class LabelLoader(Dataset):
 
     def __getitem__(self, index):
         v_path, label = self.video_csv[index]
+        v_name = v_path.name
+        v_path = str(v_path)
         label = [int(l) for l in label]
         label = np.asarray(label, dtype=np.int)
-        return {PG.VIDEO_PATH: v_path, PG.GESTURE_LABEL: label}
+        return {PG.VIDEO_NAME: v_name, PG.VIDEO_PATH: v_path, PG.GESTURE_LABEL: label}
 
     @staticmethod
     def __load_csv_label(csv_path):

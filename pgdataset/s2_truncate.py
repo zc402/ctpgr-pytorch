@@ -13,6 +13,8 @@ class TruncateDataset(SkeletonCoordsDataset):
 
     def __getitem__(self, index):
         res_dict = super().__getitem__(index)
+        if self.clip_len == -1:  # -1: Use full video
+            return res_dict
         v_len = len(res_dict[PG.GESTURE_LABEL])
         if v_len <= self.clip_len:
             raise ValueError("Video %s too short (%d) for clip_len %d" %

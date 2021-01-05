@@ -4,9 +4,10 @@ import cv2
 import numpy as np
 from imgaug import KeypointsOnImage
 from imgaug.imgaug import draw_text
-
+from warnings import warn
 from constants.enum_keys import PG
 from pgdataset.s1_skeleton_coords import SkeletonCoordsDataset
+from aichallenger.s1_resize import ResizeKeepRatio
 import pred.gesture_pred
 
 class Player:
@@ -14,7 +15,7 @@ class Player:
         self.img_size = (512, 512)
         self.gpred = pred.gesture_pred.GesturePred()
 
-    def play_dataset_video(self, is_train, video_index):
+    def play_dataset_video(self, is_train, video_index, show=True):
         self.scd = SkeletonCoordsDataset(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
         res = self.scd[video_index]
         coord_norm_FXJ = res[PG.COORD_NORM]  # Shape: F,X,J
@@ -26,26 +27,39 @@ class Player:
         v_size = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         v_fps = int(cap.get(cv2.CAP_PROP_FPS))
         duration = int(1000/(v_fps*4))
+        gestures = []  # Full video gesture recognition results
         for n in range(v_size):
-            ret, img = cap.read()
-            re_img = cv2.resize(img, self.img_size)
             gdict = self.gpred.from_skeleton(coord_norm_FXJ[n][np.newaxis])
             gesture = gdict[PG.OUT_ARGMAX]
+            gestures.append(gesture)
+            if not show:
+                continue
+            ret, img = cap.read()
+            re_img = cv2.resize(img, self.img_size)
             ges_name = self.gesture_dict[gesture]
             re_img = draw_text(re_img, 50, 100, ges_name, (255, 50, 50), size=40)
             pOnImg = kps[n]
             img_kps = pOnImg.draw_on_image(re_img)
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
+        gestures = np.array(gestures, np.int)
+        res[PG.PRED_GESTURES] = gestures
+        print('The prediction of video ', res[PG.VIDEO_NAME], ' is completed')
+        return gestures
 
     def play_custom_video(self, video_path):
+        rkr = ResizeKeepRatio((512, 512))
+
         cap = cv2.VideoCapture(str(video_path))
         v_size = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         v_fps = int(cap.get(cv2.CAP_PROP_FPS))
+        if v_fps != 15:
+            warn('Suggested video frame rate is 15, currently %d, which may impact accuracy' % v_fps)
         duration = 10
         for n in range(v_size):
             ret, img = cap.read()
-            re_img = cv2.resize(img, self.img_size)
+            re_img, _, _ = rkr.resize(img, np.zeros((2,)), np.zeros((4,)))
+            # re_img = cv2.resize(img, self.img_size)
             gdict = self.gpred.from_img(re_img)
             gesture = gdict[PG.OUT_ARGMAX]
             # Keypoints on image

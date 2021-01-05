@@ -16,7 +16,6 @@ class HandCraftedFeaturesDataset(TruncateDataset):
         #   F: frames, X: xy(2), K: keypoints
         feature_dict = self.bla.handcrafted_features(res_dict[PG.COORD_NORM])
         res_dict.update(feature_dict)
-        del res_dict[PG.VIDEO_PATH]
         return res_dict
 
 class BoneLengthAngle:
