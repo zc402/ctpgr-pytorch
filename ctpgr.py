@@ -27,6 +27,8 @@ if __name__ == '__main__':
                         help='Play gesture recognition result')
     parser.add_argument('-p', '--play', type=str,
                         help='Assign a custom video path to play and recognize police gestures')
+    parser.add_argument('-r', '--play_realtime', action='store_true',
+                        help='Open a camera and recognize gestures on realtime')
 
     parser.add_argument('-u', '--unit_test', action='store_true',
                         help='Run unit test')
@@ -51,6 +53,8 @@ if __name__ == '__main__':
         if not Path(video_path).is_file():
             raise FileNotFoundError(video_path, ' is not a file')
         pred.play_gesture_results.Player().play_custom_video(video_path)
+    elif args.play_realtime:
+        pred.play_gesture_results.Player().play_custom_video(None)
     elif args.unit_test:
         basic_tests.basic_tests.run_tests()
     elif args.eval:

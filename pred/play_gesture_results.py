@@ -19,6 +19,7 @@ class Player:
     def play_dataset_video(self, is_train, video_index, show=True):
         self.scd = PgdSkeleton(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
         res = self.scd[video_index]
+        print('Playing %s' % res[PG.VIDEO_NAME])
         coord_norm_FXJ = res[PG.COORD_NORM]  # Shape: F,X,J
         coord_norm_FJX = np.transpose(coord_norm_FXJ, (0, 2, 1))  # FJX
         coord = coord_norm_FJX * np.array(self.img_size)
@@ -45,22 +46,31 @@ class Player:
                 break
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
+        cap.release()
         gestures = np.array(gestures, np.int)
         res[PG.PRED_GESTURES] = gestures
         print('The prediction of video ', res[PG.VIDEO_NAME], ' is completed')
-        return gestures
+        return res
 
     def play_custom_video(self, video_path):
+        """video_path string: play video on disk
+            video_path None: play video from camera on realtime
+        """
         rkr = ResizeKeepRatio((512, 512))
-
-        cap = cv2.VideoCapture(str(video_path))
-        v_size = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        v_fps = int(cap.get(cv2.CAP_PROP_FPS))
-        if v_fps != 15:
-            warn('Suggested video frame rate is 15, currently %d, which may impact accuracy' % v_fps)
+        if video_path is None:
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                raise IOError('Failed to open camera.')
+        else:
+            cap = cv2.VideoCapture(str(video_path))
+            v_fps = int(cap.get(cv2.CAP_PROP_FPS))
+            if v_fps != 15:
+                warn('Suggested video frame rate is 15, currently %d, which may impact accuracy' % v_fps)
         duration = 10
-        for n in range(v_size):
+        while True:
             ret, img = cap.read()
+            if not ret:
+                break
             re_img, _, _ = rkr.resize(img, np.zeros((2,)), np.zeros((4,)))
             # re_img = cv2.resize(img, self.img_size)
             gdict = self.gpred.from_img(re_img)
@@ -78,6 +88,7 @@ class Player:
                 break
             cv2.imshow("Play saved keypoint results", re_img)
             cv2.waitKey(duration)
+        cap.release()
 
 
     gesture_dict = {

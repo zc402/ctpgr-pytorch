@@ -34,4 +34,5 @@ class Player:
                 break
             cv2.imshow("Play saved keypoint results", img_kps)
             cv2.waitKey(duration)
+        cap.release()
 
