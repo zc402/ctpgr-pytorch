@@ -34,41 +34,14 @@ class TestDataset(unittest.TestCase):
         t = time.time() - self.startTime
         print('%s: %.3f' % (self.id(), t))
 
-    # def test_hkd_s0(self):
-    #     ds = AicNative(Path.home() / "AI_challenger_keypoint", is_train=True)
-    #     dataset_next(ds)
-    #
-    # def test_hkd_s1(self):
-    #     ds = AicResize(Path.home() / "AI_challenger_keypoint", is_train=True, resize_img_size=(512, 512))
-    #     dataset_next(ds)
-    #
-    # def test_hkd_s2(self):
-    #     ds = AicAugment(Path.home() / "AI_challenger_keypoint", is_train=True, resize_img_size=(512, 512))
-    #     dataset_next(ds)
-    #
-    # def test_hkd_s3(self):
-    #     ds = AicGaussian(Path.home() / "AI_challenger_keypoint", is_train=True, resize_img_size=(512, 512), heat_size=(64, 64))
-    #     dataset_next(ds)
-    #
-    # def test_hkd_s4(self):
-    #     ds = AicAffinityField(Path.home() / "AI_challenger_keypoint", is_train=True, resize_img_size=(512, 512), heat_size=(64, 64))
-    #     dataset_next(ds)
-
-    def test_hkd_s5(self):
+    def test_hkd(self):
         ds = AicNorm(Path.home() / "AI_challenger_keypoint", is_train=True, resize_img_size=(512, 512), heat_size=(64, 64))
         dataset_next(ds)
 
-    # def test_pgd_s1(self):
-    #     ds = PgdLabel(Path.home() / 'PoliceGestureLong', is_train=True)
-    #     dataset_next(ds)
-    #
-    # def test_pgd_s2(self):
-    #     ds = PgdSkeleton(Path.home() / 'PoliceGestureLong', is_train=True, resize_img_size=(512, 512))
-    #     dataset_next(ds)
-
-    def test_pgd_s3(self):
+    def test_pgd(self):
         ds = PgdHandcraft(Path.home() / 'PoliceGestureLong', is_train=True, resize_img_size=(512, 512), clip_len=15 * 3)
-        dataset_next(ds)
+        for i in range(1000):
+            dataset_next(ds)
 
     def test_keypoint_training(self):
         # -k

@@ -1,6 +1,8 @@
 # key for dictionaries.
 from enum import Enum, auto
 
+
+# Note: Adding enum.auto() breaks the saved models.
 class HK(Enum):  # Human Keypoint
     NATIVE_IMAGE = auto()  # Native image, no resize and augmentation.
     KEYPOINTS = auto()  # Joint keypoint (x,y) coordinates, shape: (Person, J, X)
@@ -42,6 +44,7 @@ class HK(Enum):  # Human Keypoint
 class PG(Enum):  # Police Gesture
     VIDEO_PATH = auto()  # path of police gesture video
     VIDEO_NAME = 'VIDEO_NAME'
+    NUM_FRAMES = 'NUM_FRAMES'
     GESTURE_LABEL = auto()  # list of gestures corresponding to frames
 
     COORD_NATIVE = auto()  # native keypoint x,y (int)

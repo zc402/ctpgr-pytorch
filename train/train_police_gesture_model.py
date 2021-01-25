@@ -23,9 +23,9 @@ class Trainer:
         self.opt = optim.Adam(self.model.parameters(), lr=1e-3)
 
     def train(self):
-        step = 0
+        step = 1
         self.model.load_ckpt()
-        for epoch in range(100000):
+        for epoch in range(100):
             for ges_data in self.data_loader:
                 # Shape: (N,F,C) N:Batch F:Frame C:Channel(concatenated features)
                 features = torch.cat((ges_data[PG.BONE_LENGTH], ges_data[PG.BONE_ANGLE_COS],
@@ -47,7 +47,7 @@ class Trainer:
 
                 if step % 100 == 0:
                     print("Step: %d, Loss: %f" % (step, loss_tensor.item()))
-                if step % 5000 == 0 and step != 0:
+                if step % 5000 == 0:
                     self.model.save_ckpt()
                 if self.is_unittest:
                     break

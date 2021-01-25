@@ -35,7 +35,8 @@ class PgdLabel(Dataset):
         v_path = str(v_path)
         label = [int(l) for l in label]
         label = np.asarray(label, dtype=np.int)
-        return {PG.VIDEO_NAME: v_name, PG.VIDEO_PATH: v_path, PG.GESTURE_LABEL: label}
+        num_frames = label.shape[0]
+        return {PG.VIDEO_NAME: v_name, PG.VIDEO_PATH: v_path, PG.GESTURE_LABEL: label, PG.NUM_FRAMES: num_frames}
 
     @staticmethod
     def __load_csv_label(csv_path):

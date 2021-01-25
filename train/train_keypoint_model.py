@@ -58,7 +58,7 @@ class Trainer:
 
     def train(self):
         self.epoch = 0
-        self.step = 0
+        self.step = 1  # Step 1 not 0 prevents saving immediately at beginning, so as to support unit test.
         self.model_pose.load_ckpt()
         for self.epoch in range(self.epochs):
             print("Epoch:{}".format(self.epoch))
@@ -66,7 +66,6 @@ class Trainer:
 
             if self.is_unittest:
                 break
-
 
     def run_epoch(self):
 
@@ -83,7 +82,7 @@ class Trainer:
             if self.step == 0:
                 self.vis.close()
             # Validate
-            if self.step % self.val_step == 0 and self.step != 0:
+            if self.step % self.val_step == 0:
                 # self.val()
                 self.model_pose.save_ckpt()
 
