@@ -7,7 +7,7 @@ import train.train_keypoint_model
 import pred.play_keypoint_results
 import pred.play_gesture_results
 import pred.prepare_skeleton_from_video
-import Eval.evaluation
+import eval.evaluation
 
 def prepare_skeleton():
     pred.prepare_skeleton_from_video.save()
@@ -58,4 +58,4 @@ if __name__ == '__main__':
     elif args.unit_test:
         basic_tests.basic_tests.run_tests()
     elif args.eval:
-        Eval.evaluation.Eval().edit_distance()
+        eval.evaluation.Eval().edit_distance()

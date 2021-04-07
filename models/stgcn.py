@@ -29,7 +29,7 @@ class STGModel(nn.Module):
             if allow_new:
                 print('new st-gcn model ckpt created.')
             else:
-                raise FileNotFoundError('Pose model ckpt not found.')
+                raise FileNotFoundError('st-gcn model ckpt not found.')
 
     def forward(self, x):
         return self.model_pose.forward(x)
