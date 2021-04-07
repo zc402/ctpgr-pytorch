@@ -3,7 +3,8 @@ from torch import nn
 import torch.nn.functional as F
 from st_gcn.adjacency_matrix import AdjacencyMatrix
 
-class STGCNetwork(nn.Module):
+class StgcnFc(nn.Module):
+    """ STGCN, output num_class scores"""
 
     def __init__(self, in_channels, out_channels):
         super().__init__()

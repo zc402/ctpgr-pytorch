@@ -32,7 +32,7 @@ class Eval:
             print('S:%d, D:%d, I:%d'%(S, D, I))
             pass
 
-    def mean_jaccard_index(self):
+    def mean_jaccard_index_gcn(self):
         clip_len = 15*4
         coord_ds = TemporalCoordDataset(self.data_path, is_train=False)
         clip_ds = RandomClipDataset(coord_ds, clip_len)  # "random" is caused by torch dataloader. Without dataloader the data will be generated in sequence.
@@ -66,4 +66,7 @@ class Eval:
         print(pred_list)
         js = jaccard_score(gt_list, pred_list, average='micro')
         print("jaccard score:", round(js * 100, 2) )
+
+    def mean_jaccard_index_gcn_lstm(self):
+        pass
 

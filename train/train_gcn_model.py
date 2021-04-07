@@ -12,12 +12,12 @@ from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
 from pgdataset.s2_random_clip_dataset import RandomClipDataset
 
 
-
+# joint xy coords -> gcn -> fcn
 class Trainer:
     def __init__(self, is_unittest=False):
         self.is_unittest = is_unittest
         self.batch_size = 10  # Not bigger than num of training videos
-        self.clip_len = 15*4  # 15 fps
+        self.clip_len = 15*10  # 15 fps
         self.data_loader = self.build_data_loader(self.clip_len, self.batch_size)
         self.model = STGModel()
         self.model.train()
@@ -55,7 +55,7 @@ class Trainer:
 
                 if step % 100 == 0:
                     print("Step: %d, Loss: %f" % (step, loss_tensor.item()))
-                if step % 5000 == 0:
+                if step % 2000 == 0:
                     self.model.save_ckpt()
                 if self.is_unittest:
                     break
