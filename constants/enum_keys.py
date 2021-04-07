@@ -53,6 +53,7 @@ class PG(Enum):  # Police Gesture
     BONE_LENGTH = auto()  # length of bones
     BONE_ANGLE_SIN = auto()  # angle of bones
     BONE_ANGLE_COS = auto()
+    ALL_HANDCRAFTED = "ALL_HANDCRAFTED"
 
     OUT_SCORES = auto()  # prediction output scores, shape: (classes)
     OUT_ARGMAX = auto()  # predicted class, shape: (1)

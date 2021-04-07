@@ -6,31 +6,43 @@ import numpy as np
 from constants.enum_keys import PG
 
 
-class PgdLabel(Dataset):
+class LabelLoader():
+    """Load .csv label and .mp4 video path"""
 
     def __init__(self, data_path, is_train):
-        self.is_train = is_train
+        """label_root: folder of where .mp4 and .csv files are placed"""
 
         if is_train:
-            root: Path = data_path / "train"
+            label_root = data_path / "train"
         else:
-            root: Path = data_path / "test"
+            label_root = data_path / "test"
 
-        if not root.exists():
-            raise FileNotFoundError(str(root), ' not found.')
+        if not label_root.exists():
+            raise FileNotFoundError(str(label_root), ' not found.')
 
-        video_paths: List = list(root.glob('./*.mp4'))
+        video_paths: List = list(label_root.glob('./*.mp4'))
 
         csv_paths: List = [p.with_suffix('.csv') for p in video_paths]
         csv_contents: List = [self.__load_csv_label(p) for p in csv_paths]
 
-        self.video_csv = list(zip(video_paths, csv_contents))
+        self.__video_csv = list(zip(video_paths, csv_contents))
 
-    def __len__(self):
-        return len(self.video_csv)
+    def num_videos(self) -> int:
+        """Number of video files"""
+        return len(self.__video_csv)
+
+    def num_frames_per_video(self) -> np.ndarray:
+        """array of shape [frames]. used for clipping."""
+        frames_per_video = []
+        for s in range(self.num_videos()):
+            _, label = self.__video_csv[s]
+            num_frames = len(label)
+            frames_per_video.append(num_frames)
+        frames_per_video = np.array(frames_per_video)
+        return frames_per_video
 
     def __getitem__(self, index):
-        v_path, label = self.video_csv[index]
+        v_path, label = self.__video_csv[index]
         v_name = v_path.name
         v_path = str(v_path)
         label = [int(l) for l in label]

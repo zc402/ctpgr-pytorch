@@ -2,7 +2,7 @@ from pathlib import Path
 
 from torch.utils.data import DataLoader
 
-from pgdataset.s1_skeleton import PgdSkeleton
+from pgdataset.temporal_coord_loader.s1_skeleton import PgdSkeleton
 
 
 def save():

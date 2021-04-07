@@ -5,7 +5,7 @@ from models.pose_estimation_model import PoseEstimationModel
 import torch
 import numpy as np
 
-from pgdataset.s3_handcraft import BoneLengthAngle
+from pgdataset.bone_length_angle.bone_length_angle import BoneLengthAngle
 from pred.human_keypoint_pred import HumanKeypointPredict
 
 
@@ -21,7 +21,7 @@ class GesturePred:
     def from_skeleton(self, coord_norm):
         # coord_norm: FXJ, F==1
         assert coord_norm.ndim == 3 and coord_norm.shape[0] == 1
-        ges_data = self.bla.handcrafted_features(coord_norm)  # Shape: (F, C) F==1
+        ges_data = self.bla.parse(coord_norm)  # Shape: (F, C) F==1
         features = np.concatenate((ges_data[PG.BONE_LENGTH], ges_data[PG.BONE_ANGLE_COS],
                               ges_data[PG.BONE_ANGLE_SIN]), axis=1)
         features = features[np.newaxis]

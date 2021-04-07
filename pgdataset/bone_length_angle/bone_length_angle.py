@@ -1,24 +1,8 @@
 import numpy as np
-import math
-from pathlib import Path
-from pgdataset.s2_truncate import PgdTruncate
+
 from constants.enum_keys import PG
 from constants.keypoints import aic_bones, aic_bone_pairs
 
-
-class PgdHandcraft(PgdTruncate):
-    """Return handcrafted features: bone length and angle"""
-    def __init__(self, data_path: Path, is_train: bool, resize_img_size: tuple, clip_len: int):
-        super().__init__(data_path, is_train, resize_img_size, clip_len)
-        self.bla = BoneLengthAngle()
-
-    def __getitem__(self, index):
-        res_dict = super().__getitem__(index)
-        # PG.COORD_NORM: numpy array of shape: (F, X, J)
-        #   F: frames, X: xy(2), K: keypoints
-        feature_dict = self.bla.handcrafted_features(res_dict[PG.COORD_NORM])
-        res_dict.update(feature_dict)
-        return res_dict
 
 class BoneLengthAngle:
     """
@@ -33,14 +17,15 @@ class BoneLengthAngle:
         self.connections = np.asarray(aic_bones, np.int) - 1
         self.pairs = np.asarray(aic_bone_pairs, np.int) - 1
 
-    def handcrafted_features(self, coord_norm):
+    def parse(self, coord_norm):
         assert len(coord_norm.shape) == 3  # (F, X, J)
         feature_dict = {}
         bone_len = self.__bone_len(coord_norm)
         bone_sin, bone_cos = self.__bone_pair_angle(coord_norm)
         feature_dict[PG.BONE_LENGTH] = bone_len
         feature_dict[PG.BONE_ANGLE_SIN] = bone_sin
-        feature_dict[PG.BONE_ANGLE_COS] = bone_cos
+        feature_dict[PG.BONE_ANGLE_COS] = bone_cos  # (F, B)
+        feature_dict[PG.ALL_HANDCRAFTED] = np.concatenate((bone_len, bone_sin, bone_cos), axis=1)
         return feature_dict
 
     def __bone_len(self, coord):

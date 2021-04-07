@@ -5,7 +5,7 @@ import numpy as np
 from imgaug import KeypointsOnImage
 
 from constants.enum_keys import PG
-from pgdataset.s1_skeleton import PgdSkeleton
+from pgdataset.temporal_coord_loader.s1_skeleton import PgdSkeleton
 
 
 class Player:

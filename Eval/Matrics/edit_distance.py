@@ -1,30 +1,4 @@
-from pathlib import Path
-
 import numpy as np
-from itertools import groupby
-from constants.enum_keys import PG
-from pgdataset.s0_label import PgdLabel
-from torch.utils.data import DataLoader
-from pred.play_gesture_results import Player
-
-
-class Eval:
-    def __init__(self):
-        self.player = Player()
-        self.num_video = len(PgdLabel(Path.home() / 'PoliceGestureLong', is_train=False))
-        self.ed = EditDistance()
-
-    def main(self):
-        for n in range(self.num_video):
-            res = self.player.play_dataset_video(is_train=False, video_index=n, show=False)
-            target = res[PG.GESTURE_LABEL]
-            source = res[PG.PRED_GESTURES]
-            assert len(source) == len(target)
-            source_group = [k for k, g in groupby(source)]
-            target_group = [k for k, g in groupby(target)]
-            S, D, I = self.ed.edit_distance(source_group, target_group)
-            print('S:%d, D:%d, I:%d'%(S, D, I))
-            pass
 
 
 class EditDistance:

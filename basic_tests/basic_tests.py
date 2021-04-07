@@ -3,20 +3,15 @@ import unittest
 from pathlib import Path
 
 from torch.utils.data import DataLoader, Dataset
-from aichallenger import AicNative, AicResize, AicAugment, AicGaussian, AicAffinityField, AicNorm
-from pgdataset.s0_label import PgdLabel
-from pgdataset.s1_skeleton import PgdSkeleton
-from pgdataset.s3_handcraft import PgdHandcraft
-from pgdataset.s2_truncate import PgdTruncate
+from aichallenger import AicNorm
+from pgdataset.s3_length_angle_dataset import LenAngDataset
 from constants import settings
 
-import pgdataset.s1_skeleton
 import train.train_police_gesture_model
 import train.train_keypoint_model
 import pred.play_keypoint_results
 import pred.play_gesture_results
 import pred.prepare_skeleton_from_video
-import pred.evaluation
 
 
 def dataset_next(dataset: Dataset):
@@ -39,7 +34,7 @@ class TestDataset(unittest.TestCase):
         dataset_next(ds)
 
     def test_pgd(self):
-        ds = PgdHandcraft(Path.home() / 'PoliceGestureLong', is_train=True, resize_img_size=(512, 512), clip_len=15 * 3)
+        ds = LenAngDataset(Path.home() / 'PoliceGestureLong', is_train=True, resize_img_size=(512, 512), clip_len=15 * 3)
         for i in range(1000):
             dataset_next(ds)
 
