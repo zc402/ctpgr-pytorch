@@ -6,7 +6,8 @@ import torch
 import numpy as np
 from eval.Matrics.edit_distance import EditDistance
 from constants.enum_keys import PG
-from models.stgcn import STGModel
+from models.stgcn import GCN_FC
+from models.stgcn_lstm import GCN_LSTM
 from pgdataset.s0_label_loader import LabelLoader
 from pred.play_gesture_results import Player
 from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
@@ -35,38 +36,66 @@ class Eval:
     def mean_jaccard_index_gcn(self):
         clip_len = 15*4
         coord_ds = TemporalCoordDataset(self.data_path, is_train=False)
-        clip_ds = RandomClipDataset(coord_ds, clip_len)  # "random" is caused by torch dataloader. Without dataloader the data will be generated in sequence.
 
-        pred_list = []
-        gt_list = []
-        model = STGModel()
+        model = GCN_FC()
         model = model.eval()
         model.load_ckpt()
 
-        for i, clip in enumerate(clip_ds):
-            # clip shape: (T, C, V)
-            target = clip[PG.GESTURE_LABEL]  # F
-            target = target[clip_len // 2]  # 取中间帧作为目标
+        for video_dict in coord_ds:
+            start = 20
+            end = 15*10
 
-            features = clip[PG.COORD_NORM]
-            features = torch.from_numpy(features)[None]  # Add new dimension
-            features = features.permute(0, 2, 1, 3)
+            features = video_dict[PG.COORD_NORM][start: end]  # T,C,V (frame,xy,spatial)
+            features = np.transpose(features, axes=[1, 0, 2])  # CTV
+            features = features[np.newaxis]  # CTV -> NCTV
+            features = torch.from_numpy(features)
             features = features.to(model.device, dtype=torch.float32)
             with torch.no_grad():
-                class_out = model(features)  # Expect input: N,C,T,V  # Out: N, class
+                # class_out: N*T, C
+                class_out = model(features)
+
+            gt_label = video_dict[PG.GESTURE_LABEL][start:end]  # T
+
             class_out = class_out.cpu()
-            class_n = np.argmax(class_out, axis=1)
-            pred_list.append(class_n.item())
-            gt_list.append(target)
+            pred = np.argmax(class_out, axis=1)  # T
 
-            if i > 15*100:
-                break
+            print(gt_label)
+            print(pred)
+            js = jaccard_score(gt_label, pred, average='micro')
+            print("jaccard score:", round(js * 100, 2))
 
-        print(gt_list)
-        print(pred_list)
-        js = jaccard_score(gt_list, pred_list, average='micro')
-        print("jaccard score:", round(js * 100, 2) )
 
     def mean_jaccard_index_gcn_lstm(self):
-        pass
+        coord_ds = TemporalCoordDataset(self.data_path, is_train=False)
+
+        model = GCN_LSTM(batch_size=1)
+        model = model.eval()
+        model.load_ckpt()
+
+        for video_dict in coord_ds:
+            # res_dict 包含一个视频的全部标签等数据：
+            # {PG.VIDEO_NAME, PG.VIDEO_PATH, PG.GESTURE_LABEL, PG.NUM_FRAMES}
+            # {PG.COORD_NATIVE, PG.COORD_NORM}
+            start = 20
+            end = start + 15 * 100
+            h, c = model.h0(), model.c0()
+
+            features = video_dict[PG.COORD_NORM][start: end]  # T,C,V (frame,xy,spatial)
+            features = np.transpose(features, axes=[1, 0, 2])  # CTV
+            features = features[np.newaxis]  # CTV -> NCTV
+            features = torch.from_numpy(features)
+            features = features.to(model.device, dtype=torch.float32)
+            with torch.no_grad():
+                # class_out: N*T, C
+                _, _, class_out = model(features, h, c)
+
+            gt_label = video_dict[PG.GESTURE_LABEL][start: end]  # T
+
+            class_n = np.argmax(class_out.cpu(), axis=1)
+
+            print(gt_label)
+            print(class_n)
+            js = jaccard_score(gt_label, class_n, average='micro')
+            print("jaccard score:", round(js * 100, 2))
+
 

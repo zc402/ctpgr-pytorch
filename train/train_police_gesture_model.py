@@ -16,7 +16,7 @@ class Trainer:
         self.batch_size = 2  # Not bigger than num of training videos
         self.clip_len = 15*30
         pgd = LenAngDataset(Path.home() / 'PoliceGestureLong', True, clip_len=self.clip_len)
-        self.data_loader = DataLoader(pgd, batch_size=self.batch_size, shuffle=False, num_workers=settings.num_workers)
+        self.data_loader = DataLoader(pgd, batch_size=self.batch_size, shuffle=True, num_workers=settings.num_workers, drop_last=True)
         self.model = GestureRecognitionModel(batch=self.batch_size)
         self.model.train()
         self.loss = CrossEntropyLoss()  # The input is expected to contain raw, unnormalized scores for each class.

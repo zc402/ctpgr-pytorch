@@ -6,11 +6,11 @@ from torch import nn
 
 class TCN(nn.Module):
 
-    def __init__(self, channels: int, t_kernel_size: int):
+    def __init__(self, channels: int, t_kernel_size: int, stride=1):
         super().__init__()
 
         assert t_kernel_size % 2 == 1
-        stride = 1  # TODO: 这个变量要改吗？
+        # stride = 1
         padding = ((t_kernel_size - 1) // 2, 0)
 
         self.temporal_conv = nn.Sequential(

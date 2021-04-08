@@ -5,7 +5,7 @@ import numpy as np
 from imgaug import KeypointsOnImage
 
 from constants.enum_keys import PG
-from pgdataset.temporal_coord_loader.s1_skeleton import PgdSkeleton
+from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
 
 
 class Player:
@@ -14,7 +14,7 @@ class Player:
         self.img_size = (512, 512)
 
     def play(self, is_train, video_index):
-        self.scd = PgdSkeleton(Path.home() / 'PoliceGestureLong', is_train, self.img_size)
+        self.scd = TemporalCoordDataset(Path.home() / 'PoliceGestureLong', is_train)
         res = self.scd[video_index]
         coord_norm = res[PG.COORD_NORM]  # Shape: F,X,J
         coord_norm = np.transpose(coord_norm, (0, 2, 1))  # FJX

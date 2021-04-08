@@ -8,10 +8,10 @@ from st_gcn.st_gcn_fc import StgcnFc
 from torch import nn
 import torch
 
-class STGModel(nn.Module):
+class GCN_FC(nn.Module):
     def __init__(self):
         super().__init__()
-        self.ckpt_path = Path("checkpoints/st_gcn_model.pt")
+        self.ckpt_path = Path("checkpoints/gcn_fc.pt")
         self.model_pose = StgcnFc(2, 9)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.to(self.device, dtype=torch.float32)

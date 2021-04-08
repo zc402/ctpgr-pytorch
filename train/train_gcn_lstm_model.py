@@ -13,11 +13,11 @@ from pgdataset.s2_random_clip_dataset import RandomClipDataset
 
 
 # joint xy coords -> gcn -> lstm -> fcn
-class Trainer:
+class GcnLstmTrainer:
     def __init__(self, is_unittest=False):
         self.is_unittest = is_unittest
-        self.batch_size = 2  # Not bigger than num of training videos
-        self.clip_len = 15*15  # 15 fps
+        self.batch_size = 5  # Not bigger than num of training videos
+        self.clip_len = 15*20  # 15 fps
         self.data_loader = self.build_data_loader(self.clip_len, self.batch_size)
         self.model = GCN_LSTM(self.batch_size)
         self.model.train()
@@ -27,7 +27,7 @@ class Trainer:
     def build_data_loader(self, clip_len, batch_size):
         coord = TemporalCoordDataset(Path.home() / 'PoliceGestureLong', True)
         clip = RandomClipDataset(coord, clip_len)
-        data_loader = DataLoader(clip, batch_size=batch_size, shuffle=False, num_workers=settings.num_workers)
+        data_loader = DataLoader(clip, batch_size=batch_size, shuffle=True, num_workers=settings.num_workers, drop_last=True)
         return data_loader
 
     def train(self):

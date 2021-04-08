@@ -5,7 +5,7 @@ import numpy as np
 from torch.nn import CrossEntropyLoss
 from pgdataset.s3_length_angle_dataset import LenAngDataset
 from constants.enum_keys import PG
-from models.stgcn import STGModel
+from models.stgcn import GCN_FC
 from torch import optim
 from constants import settings
 from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
@@ -13,13 +13,13 @@ from pgdataset.s2_random_clip_dataset import RandomClipDataset
 
 
 # joint xy coords -> gcn -> fcn
-class Trainer:
+class GcnTrainer:
     def __init__(self, is_unittest=False):
         self.is_unittest = is_unittest
         self.batch_size = 10  # Not bigger than num of training videos
         self.clip_len = 15*10  # 15 fps
         self.data_loader = self.build_data_loader(self.clip_len, self.batch_size)
-        self.model = STGModel()
+        self.model = GCN_FC()
         self.model.train()
         self.loss = CrossEntropyLoss()  # The input is expected to contain raw, unnormalized scores for each class.
         self.opt = optim.Adam(self.model.parameters(), lr=1e-3)
@@ -27,7 +27,7 @@ class Trainer:
     def build_data_loader(self, clip_len, batch_size):
         coord = TemporalCoordDataset(Path.home() / 'PoliceGestureLong', True)
         clip = RandomClipDataset(coord, clip_len)
-        data_loader = DataLoader(clip, batch_size=batch_size, shuffle=False, num_workers=settings.num_workers)
+        data_loader = DataLoader(clip, batch_size=batch_size, shuffle=True, num_workers=settings.num_workers, drop_last=True)
         return data_loader
 
     def train(self):
@@ -42,9 +42,9 @@ class Trainer:
                 features = features.permute(0, 2, 1, 3)
                 features = features.to(self.model.device, dtype=torch.float32)
 
-                class_out = self.model(features)
-                target = ges_data[PG.GESTURE_LABEL]  # N, F
-                target = target[:, self.clip_len // 2]  # 取中间帧作为目标
+                class_out = self.model(features)  # N*T,C
+                target = ges_data[PG.GESTURE_LABEL]  # N, T
+                target = target.reshape([-1])  # N*T
                 target = target.to(self.model.device, dtype=torch.long)
 
                 # Cross Entropy, Input: (N, C), Target: (N).
