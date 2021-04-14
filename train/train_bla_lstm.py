@@ -28,13 +28,12 @@ class Trainer:
         for epoch in range(100):
             for ges_data in self.data_loader:
                 # Shape: (N,F,C) N:Batch F:Frame C:Channel(concatenated features)
-                features = torch.cat((ges_data[PG.BONE_LENGTH], ges_data[PG.BONE_ANGLE_COS],
-                                      ges_data[PG.BONE_ANGLE_SIN]), dim=2)
+                features = ges_data[PG.ALL_HANDCRAFTED]
                 features = features.permute(1, 0, 2)  # NFC->FNC
                 features = features.to(self.model.device, dtype=torch.float32)
                 h0, c0 = self.model.h0(), self.model.c0()
                 # class_out: (seq*batch, num_class)
-                _, h, c, class_out = self.model(features, h0, c0)
+                _, _, _, class_out = self.model(features, h0, c0)
                 target = ges_data[PG.GESTURE_LABEL]
                 target = target.to(self.model.device, dtype=torch.long)
                 target = target.permute(1, 0)

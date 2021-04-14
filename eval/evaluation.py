@@ -48,15 +48,17 @@ class Eval:
 
     def mean_jaccard_index(self):
         with torch.no_grad():
-            self.mean_jaccard_index_nograd()
+            self.__mean_jaccard_index_nograd()
 
-    def mean_jaccard_index_nograd(self):
+    def __mean_jaccard_index_nograd(self):
         coord_ds = TemporalCoordDataset(self.data_path, is_train=False)
 
         model = self.pred_model
         model = model.eval()
         model.load_ckpt()
 
+        gt_all = []
+        pred_all = []
         for video_dict in coord_ds:
             start = 0
             end = video_dict[PG.NUM_FRAMES]
@@ -79,15 +81,19 @@ class Eval:
             else:
                 raise NotImplementedError()
 
-            class_out = class_out.cpu()
+            class_out = class_out.cpu().numpy()
             pred = np.argmax(class_out, axis=1)  # T
 
             gt_label = video_dict[PG.GESTURE_LABEL][start:end]  # T
 
-            # print(gt_label)
-            # print(np.array(pred))
             js = jaccard_score(gt_label, pred, average='micro')
             print(video_dict[PG.VIDEO_NAME], "jaccard score:", round(js * 100, 2), "%")
+
+            pred_all.extend(pred)
+            gt_all.extend(gt_label)
+
+        js = jaccard_score(gt_all, pred_all, average='micro')
+        print("js of all videos:", round(js * 100, 2), "%")
 
 
     # def mean_jaccard_index_gcn_lstm(self):
