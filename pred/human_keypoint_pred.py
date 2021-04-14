@@ -1,17 +1,12 @@
-from pathlib import Path
-
 import torch
 import numpy as np
-from models.pafs_resnet import ResnetPAFs
-from models.pafs_network import PAFsNetwork
 from constants.enum_keys import PG, HK
-from constants.keypoints import aic_bones
-from models.pose_estimation_model import PoseEstimationModel
+from models.paf import PAF
 
 
 class HumanKeypointPredict:
     def __init__(self):
-        self.model_pose = PoseEstimationModel()
+        self.model_pose = PAF()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model_pose.to(self.device, dtype=torch.float)
         self.model_pose.load_ckpt(allow_new=False)

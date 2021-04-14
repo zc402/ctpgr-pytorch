@@ -7,10 +7,10 @@ from pathlib import Path
 import visdom
 from constants import settings
 from constants.enum_keys import HK
-from models.pose_estimation_model import PoseEstimationModel
-from models.pafs_network import PAFsLoss
+from models.paf import PAF
+from keypoint_network.pafs_network import PAFsLoss
 from aichallenger import AicNorm
-from imgaug.augmentables.heatmaps import HeatmapsOnImage
+
 
 class Trainer:
     def __init__(self, batch_size, is_unittest=False):
@@ -29,7 +29,7 @@ class Trainer:
         else:
             print("GPU not available. running with CPU.")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.model_pose = PoseEstimationModel()
+        self.model_pose = PAF()
 
         self.model_optimizer = optim.Adam(self.model_pose.parameters(), lr=1e-3)
 

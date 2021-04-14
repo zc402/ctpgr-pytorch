@@ -5,7 +5,7 @@ import numpy as np
 from torch.nn import CrossEntropyLoss
 from pgdataset.s3_length_angle_dataset import LenAngDataset
 from constants.enum_keys import PG
-from models.gesture_recognition_model import GestureRecognitionModel
+from models.bla_lstm import BLA_LSTM
 from torch import optim
 from constants import settings
 
@@ -17,7 +17,7 @@ class Trainer:
         self.clip_len = 15*30
         pgd = LenAngDataset(Path.home() / 'PoliceGestureLong', True, clip_len=self.clip_len)
         self.data_loader = DataLoader(pgd, batch_size=self.batch_size, shuffle=True, num_workers=settings.num_workers, drop_last=True)
-        self.model = GestureRecognitionModel(batch=self.batch_size)
+        self.model = BLA_LSTM(batch=self.batch_size)
         self.model.train()
         self.loss = CrossEntropyLoss()  # The input is expected to contain raw, unnormalized scores for each class.
         self.opt = optim.Adam(self.model.parameters(), lr=1e-3)

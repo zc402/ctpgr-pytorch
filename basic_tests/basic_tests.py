@@ -7,7 +7,7 @@ from aichallenger import AicNorm
 from pgdataset.s3_length_angle_dataset import LenAngDataset
 from constants import settings
 
-import train.train_police_gesture_model
+import train.train_bla_lstm
 import train.train_keypoint_model
 import pred.play_keypoint_results
 import pred.play_gesture_results

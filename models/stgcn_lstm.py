@@ -6,11 +6,12 @@ ST-GCN
 from pathlib import Path
 from st_gcn.st_gcn_no_fc import StgcnNoFc
 from torch.nn import LSTM
+from models import BaseModel
 from torch import nn
 import torch
 
 
-class GCN_LSTM(nn.Module):
+class STGCN_LSTM(BaseModel):
     def __init__(self, batch_size):
         super().__init__()
 
@@ -19,29 +20,15 @@ class GCN_LSTM(nn.Module):
         self.num_classes = 9
         self.batch_size = batch_size
 
-        self.ckpt_path = Path("checkpoints/gcn_lstm.pt")
         self.gcn = StgcnNoFc(2, self.num_out_stgcn)
         self.lstm = LSTM(input_size=self.num_out_stgcn, hidden_size=self.num_out_lstm)
         self.lin1 = nn.Linear(self.num_out_lstm, self.num_classes)
         self.drop = nn.Dropout(p=0.5)
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.to(self.device, dtype=torch.float32)
+        self._to_device()
 
-    def save_ckpt(self):
-        torch.save(self.state_dict(), self.ckpt_path)
-        print('st-gcn model ckpt saved.')
-
-    def load_ckpt(self, allow_new=True):
-        if Path.is_file(self.ckpt_path):
-            checkpoint = torch.load(self.ckpt_path)
-            self.load_state_dict(checkpoint)
-            print('st-gcn model ckpt loaded.')
-        else:
-            if allow_new:
-                print('new st-gcn model ckpt created.')
-            else:
-                raise FileNotFoundError('st-gcn model ckpt not found.')
+    def _get_model_name(self) -> str:
+        return "GCN-LSTM"
 
     def forward(self, x, h, c):
         gcn_out = self.gcn(x)  # N, F, 256

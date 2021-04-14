@@ -49,8 +49,7 @@ ctpgr-pytorch/generated
 ```bash
 # Python 3.8.5
 conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
-conda install ujson
-pip install visdom opencv-python imgaug
+pip install visdom opencv-python imgaug ujson sklearn
 ```
 
 ## 使用

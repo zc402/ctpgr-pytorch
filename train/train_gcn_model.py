@@ -5,7 +5,7 @@ import numpy as np
 from torch.nn import CrossEntropyLoss
 from pgdataset.s3_length_angle_dataset import LenAngDataset
 from constants.enum_keys import PG
-from models.stgcn import GCN_FC
+from models.stgcn_fc import STGCN_FC
 from torch import optim
 from constants import settings
 from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
@@ -19,7 +19,7 @@ class GcnTrainer:
         self.batch_size = 10  # Not bigger than num of training videos
         self.clip_len = 15*10  # 15 fps
         self.data_loader = self.build_data_loader(self.clip_len, self.batch_size)
-        self.model = GCN_FC()
+        self.model = STGCN_FC()
         self.model.train()
         self.loss = CrossEntropyLoss()  # The input is expected to contain raw, unnormalized scores for each class.
         self.opt = optim.Adam(self.model.parameters(), lr=1e-3)

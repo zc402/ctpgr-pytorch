@@ -4,23 +4,6 @@ import torch.nn as nn
 import torchvision
 
 
-# class Vgg19Top10(nn.Module):
-#     """Top 10 Layers of VGG19 + Two conv layers"""
-#     def __init__(self):
-#         super(Vgg19Top10, self).__init__()
-#         vgg_net = torchvision.models.vgg19(pretrained=False)
-#         vgg_top10 = list(vgg_net.features.children())[0:23]
-#         conv4_3 = nn.Conv2d(512, 256, kernel_size=3, padding=1, bias=False)
-#         relu4_3 = nn.ReLU(inplace=True)
-#         conv4_4 = nn.Conv2d(256, 128, kernel_size=3, padding=1, bias=False)
-#         relu4_4 = nn.ReLU(inplace=True)
-#         vgg_top10.extend([conv4_3, relu4_3, conv4_4, relu4_4])
-#         self.top10_model = nn.Sequential(*vgg_top10)
-#
-#     def forward(self, x):
-#         x = self.top10_model(x)
-#         return x
-
 class Vgg19Top10(nn.Module):
     """Top 10 Layers of VGG19 + Two conv layers"""
     def __init__(self):

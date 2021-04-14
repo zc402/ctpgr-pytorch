@@ -1,7 +1,7 @@
 from typing import Iterable
 from constants.enum_keys import HK, PG
-from models.gesture_recognition_model import GestureRecognitionModel
-from models.pose_estimation_model import PoseEstimationModel
+from models.bla_lstm import BLA_LSTM
+from models.paf import PAF
 import torch
 import numpy as np
 
@@ -13,7 +13,7 @@ class GesturePred:
     def __init__(self):
         self.p_predictor = HumanKeypointPredict()
         self.bla = BoneLengthAngle()
-        self.g_model = GestureRecognitionModel(1)
+        self.g_model = BLA_LSTM(1)
         self.g_model.load_ckpt()
         self.g_model.eval()
         self.h, self.c = self.g_model.h0(), self.g_model.c0()

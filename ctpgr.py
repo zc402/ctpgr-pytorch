@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 import basic_tests.basic_tests
 from pgdataset.temporal_coord_loader import TemporalCoordLoader
-import train.train_police_gesture_model
+import train.train_bla_lstm
 import train.train_keypoint_model
 import pred.play_keypoint_results
 import pred.play_gesture_results
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     if args.train_keypoint:
         train.train_keypoint_model.Trainer(batch_size=10).train()
     elif args.train_gesture:
-        train.train_police_gesture_model.Trainer().train()
+        train.train_bla_lstm.Trainer().train()
     elif args.clean_saved_skeleton:
         TemporalCoordLoader.remove_generated_skeletons()
     elif args.play_keypoint is not None:
