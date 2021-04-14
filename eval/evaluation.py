@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from itertools import groupby
-
+import pandas
 import torch
 import numpy as np
 from eval.Matrics.edit_distance import EditDistance
@@ -15,6 +15,8 @@ from pred.play_gesture_results import Player
 from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
 from pgdataset.s2_random_clip_dataset import RandomClipDataset
 from sklearn.metrics import jaccard_score
+import pickle
+
 
 class Eval:
 
@@ -59,6 +61,7 @@ class Eval:
 
         gt_all = []
         pred_all = []
+        res_dict = {}  # {filename: jaccard_score}
         for video_dict in coord_ds:
             start = 0
             end = video_dict[PG.NUM_FRAMES]
@@ -88,12 +91,17 @@ class Eval:
 
             js = jaccard_score(gt_label, pred, average='micro')
             print(video_dict[PG.VIDEO_NAME], "jaccard score:", round(js * 100, 2), "%")
+            res_dict[video_dict[PG.VIDEO_NAME]] = js
 
             pred_all.extend(pred)
             gt_all.extend(gt_label)
 
         js = jaccard_score(gt_all, pred_all, average='micro')
         print("js of all videos:", round(js * 100, 2), "%")
+        res_dict["ALL"] = js
+        with open(Path("generated", "gesture_results") / Path(self.model_name).with_suffix(".pkl"), "wb") as f:
+            pickle.dump(res_dict, f)
+
 
 
     # def mean_jaccard_index_gcn_lstm(self):

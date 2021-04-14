@@ -2,3 +2,6 @@
 __pycache__
 checkpoints
 generated
+*.ipynb_checkpoints
+*.ipynb
+*.pdf
