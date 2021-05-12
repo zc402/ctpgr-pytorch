@@ -4,9 +4,9 @@
 
 Download from github release (v1.0.1):
 
-https://github.com/zc402/ctpgr-pytorch/releases/
+https://github.com/zc402/ctpgr-pytorch/releases/download/v1.0.1/ctpgr-pytorch-1.0.1.zip
 
-The "code-model-results.zip" file contains all trained models and evaluation materials and results.
+The "ctpgr-pytorch-1.0.1.zip" file contains all trained models and evaluation materials and results.
 
 ## Download dataset (only for training)
 
@@ -70,7 +70,7 @@ docs/result_compare.ipynb
 
 docs/result_compare_class.ipynb
 ```
-The confusion matrix is located at:
+The confusion matrix (after running eval) is located at:
 ```
 docs/cm.pdf
 ```
