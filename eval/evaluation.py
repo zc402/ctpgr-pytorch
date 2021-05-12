@@ -15,7 +15,10 @@ from pred.play_gesture_results import Player
 from pgdataset.s1_temporal_coord_dataset import TemporalCoordDataset
 from pgdataset.s2_random_clip_dataset import RandomClipDataset
 from sklearn.metrics import jaccard_score
+from sklearn.metrics import confusion_matrix
 import pickle
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class Eval:
@@ -96,45 +99,27 @@ class Eval:
             pred_all.extend(pred)
             gt_all.extend(gt_label)
 
+        # Jaccard Score ------------------------------------
+        # per video
         js = jaccard_score(gt_all, pred_all, average='micro')
         print("js of all videos:", round(js * 100, 2), "%")
         res_dict["ALL"] = js
         with open(Path("generated", "gesture_results") / Path(self.model_name).with_suffix(".pkl"), "wb") as f:
             pickle.dump(res_dict, f)
 
+        # per class
+        res_dict = {}
+        js = jaccard_score(gt_all, pred_all, average=None)
+        for ci, class_score in enumerate(js):
+            res_dict["C"+str(ci)] = class_score
+        with open(Path("generated", "gesture_results") / Path(self.model_name).with_suffix(".class.pkl"), "wb") as f:
+            pickle.dump(res_dict, f)
+        pass
 
-
-    # def mean_jaccard_index_gcn_lstm(self):
-    #     coord_ds = TemporalCoordDataset(self.data_path, is_train=False)
-    #
-    #     model = STGCN_LSTM(batch_size=1)
-    #     model = model.eval()
-    #     model.load_ckpt()
-    #
-    #     for video_dict in coord_ds:
-    #         # res_dict 包含一个视频的全部标签等数据：
-    #         # {PG.VIDEO_NAME, PG.VIDEO_PATH, PG.GESTURE_LABEL, PG.NUM_FRAMES}
-    #         # {PG.COORD_NATIVE, PG.COORD_NORM}
-    #         start = 0
-    #         end = video_dict[PG.NUM_FRAMES] - 1
-    #         h, c = model.h0(), model.c0()
-    #
-    #         features = video_dict[PG.COORD_NORM][start: end]  # T,C,V (frame,xy,spatial)
-    #         features = np.transpose(features, axes=[1, 0, 2])  # CTV
-    #         features = features[np.newaxis]  # CTV -> NCTV
-    #         features = torch.from_numpy(features)
-    #         features = features.to(model.device, dtype=torch.float32)
-    #         with torch.no_grad():
-    #             # class_out: N*T, C
-    #             _, _, class_out = model(features, h, c)
-    #
-    #         gt_label = video_dict[PG.GESTURE_LABEL][start: end]  # T
-    #
-    #         class_n = np.argmax(class_out.cpu(), axis=1)
-    #
-    #         print(gt_label)
-    #         print(class_n)
-    #         js = jaccard_score(gt_label, class_n, average='micro')
-    #         print("jaccard score:", round(js * 100, 2))
+        # Confusion Matrix
+        cf_matrix = confusion_matrix(gt_all, pred_all)
+        ax = sns.heatmap(cf_matrix/np.sum(cf_matrix), annot=True, fmt='.1%', cmap='Blues')
+        _ = ax.set(xlabel="Predicted", ylabel="True")
+        plt.savefig("docs/cm.pdf")
 
 

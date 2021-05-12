@@ -1,68 +1,76 @@
-# 中国交通警察指挥手势识别
-This is a pytorch deep learning project that recognizes 8 kinds of Traffic police commanding gestures.
+# Continuous Traffic Police Gestures Recognizer Based on Spatial-Temporal Graph Convolution
 
-**[English Readme](readme.en.md)**
+## Download Trained model
 
-识别8种中国交通警察指挥手势的Pytorch深度学习项目
+Download from github release (v1.0.1):
 
-<p align="center">
-    <img src="docs/intro.gif" width="480">
-</p>
+https://github.com/zc402/ctpgr-pytorch/releases/
 
-## 论文
-电子学报： http://www.ejournal.org.cn/CN/10.3969/j.issn.0372-2112.2020.05.018 
+The "code-model-results.zip" file contains all trained models and evaluation materials and results.
 
-## 安装
+## Download dataset (only for training)
 
-### 下载模型参数文件`checkpoint`和生成的骨架`generated`
-下载地址：
+### Keypoint
+To train the CPM, please download AI Challenger dataset (~20GB):
 
-[GoogleDrive](https://drive.google.com/drive/folders/1kngUBiiUWUOt1NeasHS9IMGQvJrFoxpO?usp=sharing)
+https://arxiv.org/abs/1711.06475
 
-[Nutstore 坚果云](https://www.jianguoyun.com/p/DQz4eNMQ9_LMBhi-9dYD)
+(The official site is temporarily unavailable, but I can not publish it due to its license. 
+Contact me if you need this dataset for study purpose, or use COCO keypoint dataset instead.)
 
-放置在:
-
-```
-ctpgr-pytorch/checkpoints
-ctpgr-pytorch/generated
-```
-
-
-### 下载交警手势数据集（必选）和AI Challenger数据集（可选）
-
-交警手势数据集下载：
+### Police Gestures
+Download PoliceGesture dataset from
 
 [Google Drive](https://drive.google.com/drive/folders/13KHZpweTE1vRGAMF7wqMDE35kDw40Uym?usp=sharing)
 
+or
+
 [Nutstore 坚果云](https://www.jianguoyun.com/p/DQFgxv8Q9_LMBhiVrvYB)
 
-放置在：
-```
-(用户文件夹)/PoliceGestureLong
-(用户文件夹)/AI_challenger_keypoint
 
-# 用户文件夹 在 Windows下是'C:\Users\(用户名)'，在Linux下是 '/home/(用户名)'
+Put corresponding dataset into:
+
+(`home` is 'C:\Users\(name)' in Windows and `/home/(name)` in Ubuntu)
+
+```
+(home folder)/PoliceGestureLong
+(home folder)/AI_challenger_keypoint
 ```
 
-### 安装Pytorch和其它依赖：
+## Install requirements:
+
 ```bash
 # Python 3.8.5
 conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
-pip install visdom opencv-python imgaug ujson sklearn
+pip install visdom opencv-python imgaug ujson
 ```
 
-## 使用
+## Usage
 ```bash
-# 识别自定义视频文件 
-python ctpgr.py -p C:\012.mp4
+usage: ctpgr.py [-h] [--train_keypoint] [--clean_saved_skeleton] [--train_gcn_fc] [--train_gcn_lstm] [--train_bla_lstm] [--eval_gcn_fc] [--eval_gcn_lstm]
+                [--eval_bla_lstm]
 
-# 识别摄像头实时视频
-python ctpgr.py -r
+optional arguments:
+  -h, --help            show this help message and exit
+  --train_keypoint      Train human keypoint estimation model from ai_challenger dataset
+  --clean_saved_skeleton
+                        Clean the saved skeleton from generated/coords to regenerate them during next training
+  --train_gcn_fc        Train GCN_FC (proposed method)
+  --train_gcn_lstm      Train GCN_LSTM (for ablation experiment)
+  --train_bla_lstm      Train BLA_LSTM (baseline, for ablation)
+  --eval_gcn_fc         Compute Jaccard score of GCN_FC (proposed method)
+  --eval_gcn_lstm       Compute Jaccard score of GCN_LSTM (for ablation experiment)
+  --eval_bla_lstm       Compute Jaccard score of BLA_LSTM (baseline, for ablation)
 
-# 识别交警数据集中test文件夹第0个视频
-python ctpgr.py -b 0
+```
 
-# 训练等其它功能见帮助
-python ctpgr.py --help
+The Jaccard score plotting codes **only exist in [release version](https://github.com/zc402/ctpgr-pytorch/releases/)** at:
+```
+docs/result_compare.ipynb
+
+docs/result_compare_class.ipynb
+```
+The confusion matrix is located at:
+```
+docs/cm.pdf
 ```

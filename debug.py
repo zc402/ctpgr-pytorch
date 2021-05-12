@@ -5,5 +5,5 @@ if __name__ == '__main__':
     # GcnTrainer().train()
     # GcnLstmTrainer().train()
     Eval("STGCN_FC").mean_jaccard_index()
-    Eval("BLA_LSTM").mean_jaccard_index()
-    Eval("STGCN_LSTM").mean_jaccard_index()
+    # Eval("BLA_LSTM").mean_jaccard_index()
+    # Eval("STGCN_LSTM").mean_jaccard_index()
